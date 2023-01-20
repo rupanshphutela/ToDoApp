@@ -30,7 +30,7 @@ class _TasksPageState extends State<TasksPage> {
   @override
   void initState() {
     super.initState();
-    filteredTasks = widget.tasks;
+    filteredTasks = widget.tasks.toList(); // [ ...widget.tasks] bad way
     _statusFilterController.text = status.first;
   }
 
@@ -78,7 +78,7 @@ class _TasksPageState extends State<TasksPage> {
               setState(() {
                 _statusFilterController.text = value as String;
                 if (value == 'all') {
-                  filteredTasks = widget.tasks;
+                  filteredTasks = widget.tasks.toList();
                 } else {
                   filteredTasks = widget.tasks
                       .where((x) => x.status.contains(value))
@@ -103,7 +103,7 @@ class _TasksPageState extends State<TasksPage> {
                       int modifiedIndex = widget.tasks.indexWhere((item) =>
                           item.taskTitle == modifiedTitle &&
                           item.lastUpdate == modifiedLastUpdate);
-
+                      filteredTasks.removeAt(index);
                       widget.tasks.removeAt(modifiedIndex);
                     });
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
