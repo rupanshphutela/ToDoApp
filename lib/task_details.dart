@@ -21,7 +21,7 @@ class TaskDetails extends StatelessWidget {
     final selectedTask = taskList[selectedTaskIndex];
     return Scaffold(
       appBar: AppBar(
-        title: Text('$title - Task Details'), //value from main widget
+        title: Text(title), //value from main widget
       ),
       body: Column(
         children: [
