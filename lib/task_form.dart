@@ -1,25 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:to_do_app/task.dart';
-import 'package:to_do_app/tasks_page.dart';
+import 'package:to_do_app/tasks_view_model.dart';
 
-const List<String> status = ['open', 'in progress', 'complete'];
+const List<String> statuses = ['open', 'in progress', 'complete'];
 
-class TaskForm extends StatefulWidget {
-  final List<Task> tasks;
+class TaskForm extends StatelessWidget {
+  TaskForm({super.key, required this.title});
   final String title;
-  // final Function onComplete;
 
-  const TaskForm(
-      {super.key,
-      required this.tasks,
-      required this.title}); //, required this.onComplete});
-
-  @override
-  State<StatefulWidget> createState() => _TaskForm();
-}
-
-class _TaskForm extends State<TaskForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   final TextEditingController _titleController = TextEditingController();
@@ -27,62 +18,10 @@ class _TaskForm extends State<TaskForm> {
   final TextEditingController _statusController = TextEditingController();
 
   @override
-  void dispose() {
-    super.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _statusController.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _statusController.text = status.first;
-  }
-
-  _onSubmit() {
-    if (_formKey.currentState!.validate()) {
-      if (widget.tasks.isEmpty) {
-        List<Task> initialList = List<Task>.generate(
-          1,
-          (index) => Task(
-              taskTitle: _titleController.text,
-              description: _descriptionController.text,
-              status: _statusController.text,
-              lastUpdate: DateTime.now()),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  TasksPage(tasks: initialList, title: widget.title)),
-        );
-      } else {
-        widget.tasks.insert(
-            0,
-            Task(
-                taskTitle: _titleController.text,
-                description: _descriptionController.text,
-                status: _statusController.text,
-                lastUpdate: DateTime.now()));
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  TasksPage(tasks: widget.tasks, title: widget.title)),
-        );
-      }
-      _formKey.currentState!.reset();
-      // widget.onComplete();
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.title} - Form'), //value from main widget
+        title: Text(title), //value from main widget
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => Navigator.pop(context),
@@ -128,7 +67,9 @@ class _TaskForm extends State<TaskForm> {
                       },
                     ),
                     DropdownButtonFormField(
-                      value: _statusController.text,
+                      value: _statusController.text.isNotEmpty
+                          ? _statusController.text
+                          : statuses[0],
                       decoration: const InputDecoration(
                         hintText: 'Please select task status',
                       ),
@@ -138,16 +79,15 @@ class _TaskForm extends State<TaskForm> {
                         }
                         return null;
                       },
-                      items: status
+                      items: statuses
                           .map(((e) => DropdownMenuItem(
                                 value: e,
                                 child: Text(e),
                               )))
                           .toList(),
                       onChanged: (value) {
-                        setState(() {
-                          _statusController.text = value as String;
-                        });
+                        _statusController.text = value as String;
+                        // });
                       },
                     ),
                   ],
@@ -159,13 +99,18 @@ class _TaskForm extends State<TaskForm> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 ElevatedButton(
-                  onPressed: _onSubmit,
+                  onPressed: () {
+                    context.read<Tasks>().addTask(Task(
+                        taskId: UniqueKey().hashCode,
+                        taskTitle: _titleController.text,
+                        description: _descriptionController.text,
+                        status: _statusController.text.isNotEmpty
+                            ? _statusController.text
+                            : statuses[0],
+                        lastUpdate: DateTime.now()));
+                    context.pop();
+                  },
                   child: const Text('SAVE'),
-                ),
-                OutlinedButton(
-                  onPressed:
-                      _onSubmit, //???? Right now, I do the same thing as Save button but it'll change in later assignments
-                  child: const Text('CLEAR'),
                 ),
               ],
             ),

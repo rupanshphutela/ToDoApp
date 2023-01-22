@@ -1,73 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import 'package:to_do_app/task.dart';
-import 'package:to_do_app/tasks_page.dart';
+import 'package:to_do_app/tasks_view_model.dart';
 
 const List<String> status = ['open', 'in progress', 'complete'];
-var _initValue = "";
 
-class TaskDetails extends StatefulWidget {
-  final List<Task> tasks;
-  final String title;
+class TaskDetails extends StatelessWidget {
+  TaskDetails(
+      {super.key, required this.selectedTaskIndex, required this.title});
   final int selectedTaskIndex;
-  // final Function onComplete;
+  final String title;
 
-  const TaskDetails(
-      {super.key,
-      required this.tasks,
-      required this.selectedTaskIndex,
-      required this.title}); //, required this.onComplete});
-
-  @override
-  State<StatefulWidget> createState() => _TaskDetails();
-}
-
-class _TaskDetails extends State<TaskDetails> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _statusController = TextEditingController();
 
   @override
-  void dispose() {
-    super.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _statusController.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _statusController.text = widget.tasks[widget.selectedTaskIndex].status;
-  }
-
-  _onSubmit() {
-    if (_formKey.currentState!.validate()) {
-      print(widget.tasks[widget.selectedTaskIndex].status);
-      widget.tasks[widget.selectedTaskIndex].status = _statusController.text;
-      widget.tasks[widget.selectedTaskIndex].lastUpdate = DateTime.now();
-      widget.tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                TasksPage(tasks: widget.tasks, title: widget.title)),
-      );
-      _formKey.currentState!.reset();
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final taskList = context.watch<Tasks>().tasks;
+    final selectedTask = taskList[selectedTaskIndex];
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.title} - Task Details'), //value from main widget
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: Text('$title - Task Details'), //value from main widget
       ),
       body: Column(
         children: [
@@ -79,14 +33,12 @@ class _TaskDetails extends State<TaskDetails> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     TextFormField(
-                      initialValue:
-                          widget.tasks[widget.selectedTaskIndex].taskTitle,
+                      initialValue: selectedTask.taskTitle,
                       readOnly: true,
                       style: const TextStyle(color: Colors.grey),
                     ),
                     TextFormField(
-                      initialValue:
-                          widget.tasks[widget.selectedTaskIndex].description,
+                      initialValue: selectedTask.description,
                       readOnly: true,
                       maxLines: null,
                       style: const TextStyle(color: Colors.grey),
@@ -94,12 +46,12 @@ class _TaskDetails extends State<TaskDetails> {
                     DropdownButtonFormField(
                       isExpanded: true,
                       autofocus: true,
-                      value: _statusController.text,
+                      value: _statusController.text.isNotEmpty
+                          ? _statusController.text
+                          : selectedTask.status,
                       isDense: false,
                       onChanged: (value) {
-                        setState(() {
-                          _statusController.text = value as String;
-                        });
+                        _statusController.text = value as String;
                       },
                       items: status.map((statusValue) {
                         return DropdownMenuItem(
@@ -109,7 +61,7 @@ class _TaskDetails extends State<TaskDetails> {
                       }).toList(),
                     ),
                     Text(
-                      'Last updated: ${widget.tasks[widget.selectedTaskIndex].lastUpdate.toString().substring(0, 19)}',
+                      'Last updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
                     ),
                   ],
                 )),
@@ -120,7 +72,15 @@ class _TaskDetails extends State<TaskDetails> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 ElevatedButton(
-                  onPressed: _onSubmit,
+                  onPressed: () {
+                    var selectedStatus = _statusController.text.isNotEmpty
+                        ? _statusController.text
+                        : selectedTask.status.toString();
+                    context
+                        .read<Tasks>()
+                        .updateSelectedTask(selectedTaskIndex, selectedStatus);
+                    context.pop();
+                  },
                   child: const Text('SAVE'),
                 ),
               ],

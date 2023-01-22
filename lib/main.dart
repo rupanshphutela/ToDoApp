@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
-// import 'package:to_do_app/task.dart';
-import 'package:to_do_app/tasks_page.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import 'package:to_do_app/routes.dart';
+import 'package:to_do_app/tasks_view_model.dart';
+
+final _router = GoRouter(initialLocation: '/tasks', routes: routes);
 
 void main() {
   runApp(const MyApp());
@@ -8,24 +13,17 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  // List<Task> task = [
-  //   Task(
-  //       task_title: 'First',
-  //       description: 'Testing First Task',
-  //       status: 'In progress')
-  // ];
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tasks by Rupansh',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-      ),
-      home: const TasksPage(
-        title: 'Rupansh To Do',
-        // tasks: task,
+    return ChangeNotifierProvider(
+      create: (context) => Tasks(),
+      child: MaterialApp.router(
+        title: title,
+        theme: ThemeData(
+          primarySwatch: Colors.teal,
+        ),
+        routerConfig: _router,
       ),
     );
   }
