@@ -23,8 +23,8 @@ final routes = [
   GoRoute(
       path: '/taskdetail',
       builder: (context, state) {
-        final int taskId = int.parse(state.queryParams['task_id'].toString());
+        final String taskId = state.queryParams['task_id'].toString();
         return TaskDetails(
-            selectedTaskIndex: taskId, title: '$title - Task Details');
+            selectedTaskId: taskId, title: '$title - Task Details');
       }),
 ];

@@ -7,9 +7,8 @@ import 'package:to_do_app/tasks_view_model.dart';
 const List<String> status = ['open', 'in progress', 'complete'];
 
 class TaskDetails extends StatelessWidget {
-  TaskDetails(
-      {super.key, required this.selectedTaskIndex, required this.title});
-  final int selectedTaskIndex;
+  TaskDetails({super.key, required this.selectedTaskId, required this.title});
+  final String selectedTaskId;
   final String title;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -18,7 +17,8 @@ class TaskDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final taskList = context.watch<Tasks>().tasks;
-    final selectedTask = taskList[selectedTaskIndex];
+    final selectedTask =
+        taskList.singleWhere((element) => element.taskId == selectedTaskId);
     return Scaffold(
       appBar: AppBar(
         title: Text(title), //value from main widget
@@ -78,7 +78,7 @@ class TaskDetails extends StatelessWidget {
                         : selectedTask.status.toString();
                     context
                         .read<Tasks>()
-                        .updateSelectedTask(selectedTaskIndex, selectedStatus);
+                        .updateSelectedTask(selectedTaskId, selectedStatus);
                     context.pop();
                   },
                   child: const Text('SAVE'),

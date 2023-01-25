@@ -15,6 +15,7 @@ var taskTitle = "";
 var filterDefaultState = "";
 const taskDetailsIndex = 2;
 
+// ignore: must_be_immutable
 class TaskList extends StatelessWidget {
   TaskList(
       {super.key,
@@ -43,69 +44,71 @@ class TaskList extends StatelessWidget {
       appBar: AppBar(
         title: const Text('The To Do App - Tasks'),
       ),
-      body: Column(
-        children: [
-          DropdownButtonFormField(
-            value: _statusFilterController.text.isNotEmpty
-                ? _statusFilterController.text
-                : filterDefaultState,
-            decoration: const InputDecoration(
-              hintText: 'Please select task status',
-            ),
-            validator: (value) {
-              if (value == null) {
-                return 'No value selected';
-              }
-              return null;
-            },
-            items: status
-                .map(((e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(e),
-                    )))
-                .toList(),
-            onChanged: (value) {
-              _statusFilterController.text = value as String;
+      body: SingleChildScrollView(
+        physics: const ScrollPhysics(),
+        child: Column(
+          children: [
+            DropdownButtonFormField(
+              value: _statusFilterController.text.isNotEmpty
+                  ? _statusFilterController.text
+                  : filterDefaultState,
+              decoration: const InputDecoration(
+                hintText: 'Please select task status',
+              ),
+              validator: (value) {
+                if (value == null) {
+                  return 'No value selected';
+                }
+                return null;
+              },
+              items: status
+                  .map(((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(e),
+                      )))
+                  .toList(),
+              onChanged: (value) {
+                _statusFilterController.text = value as String;
 
-              context.push('/tasks?state=$value');
-            },
-          ),
-          Center(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: filteredTasks.length,
-              itemBuilder: (context, index) {
-                return Dismissible(
-                  key: UniqueKey(),
-                  onDismissed: (direction) {
-                    taskTitle = filteredTasks[index].taskTitle;
-                    var taskId = filteredTasks[index].taskId;
-                    int modifiedIndex =
-                        taskList.indexWhere((item) => item.taskId == taskId);
-                    filteredTasks.removeAt(index);
-                    context.read<Tasks>().deleteTask(modifiedIndex);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Task "$taskTitle" removed')));
-                  },
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xff764abc),
-                    ),
-                    title: Text(filteredTasks[index].taskTitle),
-                    subtitle: Text(
-                        'Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
-                    onTap: () {
+                context.push('/tasks?state=$value');
+              },
+            ),
+            Center(
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: filteredTasks.length,
+                itemBuilder: (context, index) {
+                  return Dismissible(
+                    key: UniqueKey(),
+                    onDismissed: (direction) {
+                      taskTitle = filteredTasks[index].taskTitle;
                       var taskId = filteredTasks[index].taskId;
                       int modifiedIndex =
                           taskList.indexWhere((item) => item.taskId == taskId);
-                      context.push('/taskdetail?task_id=$modifiedIndex');
+                      filteredTasks.removeAt(index);
+                      context.read<Tasks>().deleteTask(modifiedIndex);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Task "$taskTitle" removed')));
                     },
-                  ),
-                );
-              },
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xff764abc),
+                      ),
+                      title: Text(filteredTasks[index].taskTitle),
+                      subtitle: Text(
+                          'Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
+                      onTap: () {
+                        var taskId = filteredTasks[index].taskId;
+                        context.push('/taskdetail?task_id=$taskId');
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
@@ -113,7 +116,11 @@ class TaskList extends StatelessWidget {
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add Task'),
         ],
         onTap: (index) {
-          context.push(routes[index].path);
+          var route = ModalRoute.of(context);
+          if (route?.settings.name == '/tasks' && index == 0) {
+          } else {
+            context.push(routes[index].path);
+          }
         },
       ),
     );
