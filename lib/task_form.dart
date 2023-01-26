@@ -29,7 +29,11 @@ class TaskForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String taskId = UniqueKey().hashCode.toString();
+    bool isNewTask = true;
     Map<String, String> linkedTasks = context.watch<Tasks>().linkedTasks;
+    var existingTasks = context.watch<Tasks>().tasks.length;
+    var visibility = context.watch<Tasks>().visibility;
     return Scaffold(
       appBar: AppBar(
         title: Text(title), //value from main widget
@@ -102,16 +106,17 @@ class TaskForm extends StatelessWidget {
                         _statusController.text = value as String;
                       },
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 15),
-                      child: Text(
-                        'Links',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic),
-                        textAlign: TextAlign.center,
+                    if (existingTasks > 0)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 15),
+                        child: Text(
+                          'Links',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontStyle: FontStyle.italic),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
                     SingleChildScrollView(
                       child: Container(
                         decoration: BoxDecoration(
@@ -152,7 +157,8 @@ class TaskForm extends StatelessWidget {
                                 child: IconButton(
                                   icon: const Icon(CupertinoIcons.delete),
                                   onPressed: () {
-                                    context.read<Tasks>().removeLinkedTask(key);
+                                    context.read<Tasks>().removeLinkedTask(
+                                        isNewTask, key, taskId);
                                   },
                                 ),
                               ),
@@ -166,14 +172,17 @@ class TaskForm extends StatelessWidget {
                         ),
                       ),
                     ),
-                    CupertinoButton(
-                      onPressed: () {
-                        context.read<Tasks>().toggleAddTaskLinkForm();
-                      },
-                      child: const Text('Add Links?'),
-                    ),
+                    if (existingTasks > 0)
+                      CupertinoButton(
+                        onPressed: () {
+                          context.read<Tasks>().toggleAddTaskLinkForm();
+                        },
+                        child: visibility
+                            ? const Text('Hide Links?')
+                            : const Text('Add Links?'),
+                      ),
                     Visibility(
-                      visible: context.watch<Tasks>().visibility,
+                      visible: visibility,
                       child: Column(
                         children: <Widget>[
                           Row(
@@ -229,8 +238,8 @@ class TaskForm extends StatelessWidget {
                                   // },
                                   isExpanded: true,
                                   items: context
-                                      .watch<Tasks>()
-                                      .getTaskIdDropdownMenuItems(),
+                                      .read<Tasks>()
+                                      .getTaskIdDropdownMenuItems(taskId),
                                 ),
                               ),
                               SizedBox(
@@ -249,6 +258,8 @@ class TaskForm extends StatelessWidget {
                                       if (linkedTasks[_taskIdController.text] !=
                                           _labelController.text) {
                                         context.read<Tasks>().addLinkedTask(
+                                            isNewTask,
+                                            taskId,
                                             _taskIdController.text,
                                             _labelController.text);
                                         String selectedDropdownMenuItem =
@@ -270,7 +281,10 @@ class TaskForm extends StatelessWidget {
                                       if (linkedTasks[_taskIdController.text] !=
                                           labels[0]) {
                                         context.read<Tasks>().addLinkedTask(
-                                            _taskIdController.text, labels[0]);
+                                            isNewTask,
+                                            taskId,
+                                            _taskIdController.text,
+                                            labels[0]);
 
                                         String selectedDropdownMenuItem =
                                             _taskIdController.text;
@@ -307,16 +321,25 @@ class TaskForm extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        context.read<Tasks>().toggleAddTaskLinkForm();
+                        if (visibility) {
+                          context.read<Tasks>().toggleAddTaskLinkForm();
+                        }
                         context.read<Tasks>().addTask(Task(
-                            taskId: UniqueKey().hashCode.toString(),
+                            taskId: taskId,
                             taskTitle: _titleController.text,
                             description: _descriptionController.text,
                             status: _statusController.text.isNotEmpty
                                 ? _statusController.text
                                 : statuses[0],
-                            relationship: linkedTasks,
+                            relationship: {},
                             lastUpdate: DateTime.now()));
+                        if (linkedTasks.isNotEmpty) {
+                          linkedTasks.forEach((key, value) {
+                            context
+                                .read<Tasks>()
+                                .addLinkedTask(false, taskId, key, value);
+                          });
+                        }
                         context.read<Tasks>().clearLinkedTasks();
                         context.pop();
                       }

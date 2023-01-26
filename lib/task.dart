@@ -14,6 +14,6 @@ class Task {
     required this.description,
     required this.status,
     required this.lastUpdate,
-    this.relationship = const {},
+    required this.relationship,
   });
 }

@@ -5,11 +5,12 @@ class Tasks with ChangeNotifier {
   //All about tasks
   final List<Task> _tasks = [];
   List<Task> _filteredList = [];
-  int _latestTaskIndex = 0;
+  int _thisTaskIndex = 0;
 
   List<Task> get tasks => _tasks.toList();
 
   Task getTaskDetails(String taskId) {
+    //???? do logic for if its linked task is deleted
     return _tasks.singleWhere((element) => element.taskId == taskId);
   }
 
@@ -18,21 +19,21 @@ class Tasks with ChangeNotifier {
     return _filteredList.toList();
   } //initially
 
-  getLatestTask() => _tasks[_latestTaskIndex];
+  getLatestTask() => _tasks[_thisTaskIndex];
 
   addTask(Task task) {
     _tasks.insert(0, task);
-    _latestTaskIndex = _tasks.indexOf(task);
+    _thisTaskIndex = _tasks.indexOf(task);
 
-    // debugPrint(task.taskId +
-    //     " " +
-    //     task.description +
-    //     " " +
-    //     task.taskTitle +
-    //     " " +
-    //     task.status +
-    //     " " +
-    //     task.relationship.toString());
+    debugPrint(task.taskId +
+        " " +
+        task.description +
+        " " +
+        task.taskTitle +
+        " " +
+        task.status +
+        " " +
+        task.relationship.toString());
     notifyListeners();
   }
 
@@ -44,11 +45,13 @@ class Tasks with ChangeNotifier {
     }
   }
 
-  updateSelectedTask(String selectedTaskId, String selectedStatus) {
-    _latestTaskIndex =
+  updateSelectedTask(String selectedTaskId, String selectedStatus,
+      Map<String, String> currentlyLinkedTasks) {
+    _thisTaskIndex =
         _tasks.indexWhere((element) => element.taskId == selectedTaskId);
-    _tasks[_latestTaskIndex].status = selectedStatus;
-    _tasks[_latestTaskIndex].lastUpdate = DateTime.now();
+    _tasks[_thisTaskIndex].status = selectedStatus;
+    _tasks[_thisTaskIndex].lastUpdate = DateTime.now();
+    _tasks[_thisTaskIndex].relationship = currentlyLinkedTasks;
     _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     notifyListeners();
   }
@@ -65,12 +68,13 @@ class Tasks with ChangeNotifier {
   }
 
   //Dropdown Menu Task Ids to link tasks
+  List<String> allTaskIdDropdownMenuItems = [];
   List<DropdownMenuItem<String>> taskIdDropdownMenuItems = [];
 
-  List<DropdownMenuItem<String>> getTaskIdDropdownMenuItems() {
-    taskIdDropdownMenuItems = _tasks
-        .map((e) => e.taskId)
-        .toList()
+  List<DropdownMenuItem<String>> getTaskIdDropdownMenuItems(taskId) {
+    allTaskIdDropdownMenuItems = _tasks.map((e) => e.taskId).toList();
+    allTaskIdDropdownMenuItems.remove(taskId);
+    taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
         .map((taskIdMenuItem) => DropdownMenuItem(
             value: taskIdMenuItem, child: Text(taskIdMenuItem)))
         .toList();
@@ -85,19 +89,39 @@ class Tasks with ChangeNotifier {
 
   //Linked Tasks to show linked tasks
   Map<String, String> linkedTasks = {};
+  Map<String, String> currentlyLinkedTasks = {};
 
-  addLinkedTask(String key, String value) {
-    linkedTasks[key] = value;
-    notifyListeners();
+  Map<String, String> getCurrentlyLinkedTasks(String taskId) {
+    Map<String, String> task =
+        _tasks.singleWhere((element) => element.taskId == taskId).relationship;
+    return task;
   }
 
-  removeLinkedTask(String taskId) {
-    linkedTasks.remove(taskId);
-    notifyListeners();
+  addLinkedTask(bool isNewTask, String taskId, String key, String value) {
+    if (!isNewTask) {
+      Task task = _tasks.singleWhere((element) => element.taskId == taskId);
+      int index = _tasks.indexOf(task);
+      _tasks[index].relationship[key] = value;
+      notifyListeners();
+    } else {
+      linkedTasks[key] = value;
+    }
+  }
+
+  removeLinkedTask(bool isNewTask, String key, String taskId) {
+    if (!isNewTask) {
+      Task task = _tasks.singleWhere((element) => element.taskId == taskId);
+      int index = _tasks.indexOf(task);
+      _tasks[index].relationship.remove(key);
+      notifyListeners();
+    } else {
+      linkedTasks.remove(taskId);
+    }
   }
 
   clearLinkedTasks() {
     linkedTasks.clear();
+    currentlyLinkedTasks.clear();
     notifyListeners();
   }
 }
