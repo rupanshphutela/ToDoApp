@@ -10,30 +10,19 @@ class Tasks with ChangeNotifier {
   List<Task> get tasks => _tasks.toList();
 
   Task getTaskDetails(String taskId) {
-    //???? do logic for if its linked task is deleted
     return _tasks.singleWhere((element) => element.taskId == taskId);
   }
 
   List<Task> filteredTasks() {
     _filteredList = _tasks.toList();
     return _filteredList.toList();
-  } //initially
+  }
 
   getLatestTask() => _tasks[_thisTaskIndex];
 
   addTask(Task task) {
     _tasks.insert(0, task);
     _thisTaskIndex = _tasks.indexOf(task);
-
-    debugPrint(task.taskId +
-        " " +
-        task.description +
-        " " +
-        task.taskTitle +
-        " " +
-        task.status +
-        " " +
-        task.relationship.toString());
     notifyListeners();
   }
 
@@ -56,8 +45,12 @@ class Tasks with ChangeNotifier {
     notifyListeners();
   }
 
-  deleteTask(int index) {
-    _tasks.removeAt(index);
+  deleteTask(String taskId) {
+    for (var element in _tasks) {
+      element.relationship.removeWhere((key, value) => key == taskId);
+    }
+    _tasks.removeWhere((element) => element.taskId == taskId);
+    notifyListeners();
   }
 
   bool visibility = false;
@@ -83,7 +76,7 @@ class Tasks with ChangeNotifier {
 
   deleteTaskIdFromTaskIdDropdown(String taskId) {
     taskIdDropdownMenuItems
-        .removeWhere((element) => taskId == element.value.toString());
+        .removeWhere((element) => taskId == element.toString());
     notifyListeners();
   }
 
@@ -102,10 +95,12 @@ class Tasks with ChangeNotifier {
       Task task = _tasks.singleWhere((element) => element.taskId == taskId);
       int index = _tasks.indexOf(task);
       _tasks[index].relationship[key] = value;
-      notifyListeners();
+      _tasks[index].lastUpdate = DateTime.now();
+      _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     } else {
       linkedTasks[key] = value;
     }
+    notifyListeners();
   }
 
   removeLinkedTask(bool isNewTask, String key, String taskId) {
@@ -113,10 +108,12 @@ class Tasks with ChangeNotifier {
       Task task = _tasks.singleWhere((element) => element.taskId == taskId);
       int index = _tasks.indexOf(task);
       _tasks[index].relationship.remove(key);
-      notifyListeners();
+      _tasks[index].lastUpdate = DateTime.now();
+      _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     } else {
-      linkedTasks.remove(taskId);
+      linkedTasks.remove(key);
     }
+    notifyListeners();
   }
 
   clearLinkedTasks() {

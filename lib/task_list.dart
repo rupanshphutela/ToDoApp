@@ -86,8 +86,9 @@ class TaskList extends StatelessWidget {
                       var taskId = filteredTasks[index].taskId;
                       int modifiedIndex =
                           taskList.indexWhere((item) => item.taskId == taskId);
-                      filteredTasks.removeAt(index);
-                      context.read<Tasks>().deleteTask(modifiedIndex);
+                      filteredTasks
+                          .removeWhere((element) => element.taskId == taskId);
+                      context.read<Tasks>().deleteTask(taskId);
                       ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Task "$taskTitle" removed')));
                     },

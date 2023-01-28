@@ -29,6 +29,8 @@ class TaskForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool addLink = false;
+    bool isDeleteLink = false;
     String taskId = UniqueKey().hashCode.toString();
     bool isNewTask = true;
     Map<String, String> linkedTasks = context.watch<Tasks>().linkedTasks;
@@ -36,11 +38,7 @@ class TaskForm extends StatelessWidget {
     var visibility = context.watch<Tasks>().visibility;
     return Scaffold(
       appBar: AppBar(
-        title: Text(title), //value from main widget
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: Text(title),
       ),
       body: SingleChildScrollView(
         physics: const ScrollPhysics(),
@@ -157,8 +155,16 @@ class TaskForm extends StatelessWidget {
                                 child: IconButton(
                                   icon: const Icon(CupertinoIcons.delete),
                                   onPressed: () {
+                                    isDeleteLink = true;
+
                                     context.read<Tasks>().removeLinkedTask(
                                         isNewTask, key, taskId);
+                                    if (isDeleteLink) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(
+                                              content: Text(
+                                                  'Link to task $key removed')));
+                                    }
                                   },
                                 ),
                               ),
@@ -228,7 +234,6 @@ class TaskForm extends StatelessWidget {
                                   onChanged: (taskIdValue) {
                                     _taskIdController.text =
                                         taskIdValue as String;
-                                    // taskIdValue = "";
                                   },
                                   // validator: (value) {
                                   //   if (value == null) {
@@ -238,7 +243,7 @@ class TaskForm extends StatelessWidget {
                                   // },
                                   isExpanded: true,
                                   items: context
-                                      .read<Tasks>()
+                                      .watch<Tasks>()
                                       .getTaskIdDropdownMenuItems(taskId),
                                 ),
                               ),
@@ -247,60 +252,69 @@ class TaskForm extends StatelessWidget {
                                       0.02),
                               Flexible(
                                 flex: 0,
-                                child: ElevatedButton(
-                                  style: const ButtonStyle(
-                                      backgroundColor:
-                                          MaterialStatePropertyAll<Color>(
-                                              Colors.lightBlueAccent)),
-                                  onPressed: () {
-                                    if (_taskIdController.text.isNotEmpty &&
-                                        _labelController.text.isNotEmpty) {
-                                      if (linkedTasks[_taskIdController.text] !=
-                                          _labelController.text) {
-                                        context.read<Tasks>().addLinkedTask(
-                                            isNewTask,
-                                            taskId,
-                                            _taskIdController.text,
-                                            _labelController.text);
-                                        String selectedDropdownMenuItem =
-                                            _taskIdController.text;
-                                        context
-                                            .read<Tasks>()
-                                            .deleteTaskIdFromTaskIdDropdown(
-                                                selectedDropdownMenuItem);
-                                        _taskIdController.clear();
-                                        _labelController.clear();
-                                      } else {
-                                        debugPrint(
-                                            "item ${linkedTasks[_taskIdController.text]} already there and its value is ${_labelController.text}");
-                                      }
-                                    } else if (_taskIdController
-                                            .text.isNotEmpty &&
-                                        (_labelController.text == "" ||
-                                            _labelController.text.isEmpty)) {
-                                      if (linkedTasks[_taskIdController.text] !=
-                                          labels[0]) {
-                                        context.read<Tasks>().addLinkedTask(
-                                            isNewTask,
-                                            taskId,
-                                            _taskIdController.text,
-                                            labels[0]);
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.brown,
+                                  child: IconButton(
+                                    icon: const Icon(CupertinoIcons.add),
+                                    onPressed: () {
+                                      if (_taskIdController.text.isNotEmpty &&
+                                          _labelController.text.isNotEmpty) {
+                                        if (linkedTasks[
+                                                _taskIdController.text] !=
+                                            _labelController.text) {
+                                          addLink = true;
+                                          context.read<Tasks>().addLinkedTask(
+                                              isNewTask,
+                                              taskId,
+                                              _taskIdController.text,
+                                              _labelController.text);
+                                          String selectedDropdownMenuItem =
+                                              _taskIdController.text;
+                                          context
+                                              .read<Tasks>()
+                                              .deleteTaskIdFromTaskIdDropdown(
+                                                  selectedDropdownMenuItem);
+                                        } else {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                                  content: Text(
+                                                      'Relation "${linkedTasks[_taskIdController.text]}" already present for task - ${_taskIdController.text}')));
+                                        }
+                                      } else if (_taskIdController
+                                              .text.isNotEmpty &&
+                                          (_labelController.text == "" ||
+                                              _labelController.text.isEmpty)) {
+                                        if (linkedTasks[
+                                                _taskIdController.text] !=
+                                            labels[0]) {
+                                          addLink = true;
+                                          context.read<Tasks>().addLinkedTask(
+                                              isNewTask,
+                                              taskId,
+                                              _taskIdController.text,
+                                              labels[0]);
 
-                                        String selectedDropdownMenuItem =
-                                            _taskIdController.text;
-                                        context
-                                            .read<Tasks>()
-                                            .deleteTaskIdFromTaskIdDropdown(
-                                                selectedDropdownMenuItem);
-                                        _taskIdController.clear();
-                                        _labelController.clear();
-                                      } else {
-                                        debugPrint(
-                                            "item ${linkedTasks[_taskIdController.text]} already there and its value is ${labels[0]}");
+                                          String selectedDropdownMenuItem =
+                                              _taskIdController.text;
+                                          context
+                                              .read<Tasks>()
+                                              .deleteTaskIdFromTaskIdDropdown(
+                                                  selectedDropdownMenuItem);
+                                        } else {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                                  content: Text(
+                                                      'Relation "${linkedTasks[_taskIdController.text]}" already present for task - ${_taskIdController.text}')));
+                                        }
                                       }
-                                    }
-                                  },
-                                  child: const Text('SAVE'),
+                                      if (addLink) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                                content: Text(
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for task "${_taskIdController.text}" added')));
+                                      }
+                                    },
+                                  ),
                                 ),
                               ),
                             ],
