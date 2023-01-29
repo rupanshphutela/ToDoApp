@@ -62,22 +62,41 @@ class Tasks with ChangeNotifier {
 
   //Dropdown Menu Task Ids to link tasks
   List<String> allTaskIdDropdownMenuItems = [];
-  List<DropdownMenuItem<String>> taskIdDropdownMenuItems = [];
 
-  List<DropdownMenuItem<String>> getTaskIdDropdownMenuItems(taskId) {
+  List<DropdownMenuItem<String>> taskIdDropdownMenuItems = [];
+  List<String> linkedTaskIds = [];
+
+  List<DropdownMenuItem<String>> getTaskIdDropdownMenuItems(String taskId) {
     allTaskIdDropdownMenuItems = _tasks.map((e) => e.taskId).toList();
+    var task = _tasks.where((element) => element.taskId == taskId).toList();
+    if (task.isNotEmpty && task[0].relationship.isNotEmpty) {
+      linkedTaskIds = task[0].relationship.keys.toList();
+    } else if (task.isEmpty && linkedTasks.isNotEmpty) {
+      linkedTaskIds = linkedTasks.keys.toList();
+    }
+
     allTaskIdDropdownMenuItems.remove(taskId);
     taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
         .map((taskIdMenuItem) => DropdownMenuItem(
-            value: taskIdMenuItem, child: Text(taskIdMenuItem)))
+              enabled: allTaskIdDropdownMenuItems
+                  .where((element) => !linkedTaskIds.contains(element))
+                  .toList()
+                  .contains(taskIdMenuItem),
+              value: taskIdMenuItem,
+              child: Text(
+                taskIdMenuItem,
+                style: TextStyle(
+                  color: allTaskIdDropdownMenuItems
+                          .where((element) => !linkedTaskIds.contains(element))
+                          .toList()
+                          .contains(taskIdMenuItem)
+                      ? Colors.blue
+                      : Colors.grey,
+                ),
+              ),
+            ))
         .toList();
     return taskIdDropdownMenuItems;
-  }
-
-  deleteTaskIdFromTaskIdDropdown(String taskId) {
-    taskIdDropdownMenuItems
-        .removeWhere((element) => taskId == element.toString());
-    notifyListeners();
   }
 
   //Linked Tasks to show linked tasks
@@ -110,8 +129,10 @@ class Tasks with ChangeNotifier {
       _tasks[index].relationship.remove(key);
       _tasks[index].lastUpdate = DateTime.now();
       _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
+      linkedTaskIds.remove(key);
     } else {
       linkedTasks.remove(key);
+      linkedTaskIds.remove(key);
     }
     notifyListeners();
   }
@@ -119,6 +140,11 @@ class Tasks with ChangeNotifier {
   clearLinkedTasks() {
     linkedTasks.clear();
     currentlyLinkedTasks.clear();
+    notifyListeners();
+  }
+
+  clearLinkedTaskIds() {
+    linkedTaskIds.clear();
     notifyListeners();
   }
 }

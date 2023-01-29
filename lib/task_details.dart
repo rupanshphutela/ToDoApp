@@ -28,9 +28,13 @@ class TaskDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool? isNewTask;
+
     if (selectedTaskId.isNotEmpty) {
       isNewTask = false;
     }
+    List<DropdownMenuItem<String>>? taskIdDropdownMenuItems =
+        context.read<Tasks>().getTaskIdDropdownMenuItems(selectedTaskId);
+
     bool addLink = false;
     bool isDeleteLink = false;
     final taskList = context.watch<Tasks>().tasks;
@@ -157,6 +161,7 @@ class TaskDetails extends StatelessWidget {
                                   ),
                                 ),
                                 onTap: () {
+                                  context.read<Tasks>().clearLinkedTaskIds();
                                   context.push('/taskdetail?task_id=$key');
                                 },
                               ),
@@ -240,9 +245,10 @@ class TaskDetails extends StatelessWidget {
                                   value: _taskIdController.text.isNotEmpty
                                       ? _taskIdController.text
                                       : null,
-                                  onChanged: (taskIdValue) {
-                                    _taskIdController.text =
-                                        taskIdValue as String;
+                                  isExpanded: true,
+                                  items: taskIdDropdownMenuItems,
+                                  onChanged: (String? taskIdValue) {
+                                    _taskIdController.text = taskIdValue!;
                                   },
                                   // validator: (value) {
                                   //   if (value == null) {
@@ -250,11 +256,6 @@ class TaskDetails extends StatelessWidget {
                                   //   }
                                   //   return null;
                                   // },
-                                  isExpanded: true,
-                                  items: context
-                                      .watch<Tasks>()
-                                      .getTaskIdDropdownMenuItems(
-                                          selectedTaskId),
                                 ),
                               ),
                               SizedBox(
@@ -278,12 +279,6 @@ class TaskDetails extends StatelessWidget {
                                               selectedTaskId,
                                               _taskIdController.text,
                                               _labelController.text);
-                                          String selectedDropdownMenuItem =
-                                              _taskIdController.text;
-                                          context
-                                              .read<Tasks>()
-                                              .deleteTaskIdFromTaskIdDropdown(
-                                                  selectedDropdownMenuItem);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -303,13 +298,6 @@ class TaskDetails extends StatelessWidget {
                                               selectedTaskId,
                                               _taskIdController.text,
                                               labels[0]);
-
-                                          String selectedDropdownMenuItem =
-                                              _taskIdController.text;
-                                          context
-                                              .read<Tasks>()
-                                              .deleteTaskIdFromTaskIdDropdown(
-                                                  selectedDropdownMenuItem);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
