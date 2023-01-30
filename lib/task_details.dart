@@ -27,19 +27,12 @@ class TaskDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool? isNewTask;
-
-    if (selectedTaskId.isNotEmpty) {
-      isNewTask = false;
-    }
     List<DropdownMenuItem<String>>? taskIdDropdownMenuItems =
         context.read<Tasks>().getTaskIdDropdownMenuItems(selectedTaskId);
 
     bool addLink = false;
     bool isDeleteLink = false;
     final taskList = context.watch<Tasks>().tasks;
-    var existingTasks = context.watch<Tasks>().tasks.length;
-    var visibility = context.watch<Tasks>().visibility;
     final selectedTask =
         taskList.singleWhere((element) => element.taskId == selectedTaskId);
     _statusController.text = selectedTask.status;
@@ -94,9 +87,6 @@ class TaskDetails extends StatelessWidget {
                             ? _statusController.text
                             : selectedTask.status.toString();
                         if (_formKey.currentState!.validate()) {
-                          if (visibility) {
-                            context.read<Tasks>().toggleAddTaskLinkForm();
-                          }
                           context.read<Tasks>().updateSelectedTask(
                               selectedTaskId,
                               selectedStatus,
@@ -117,7 +107,7 @@ class TaskDetails extends StatelessWidget {
                     Text(
                       'Last updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
                     ),
-                    if (existingTasks > 1)
+                    if (context.read<Tasks>().checkLinksEnablementEditForm)
                       const Padding(
                         padding: EdgeInsets.only(top: 15),
                         child: Text(
@@ -171,8 +161,9 @@ class TaskDetails extends StatelessWidget {
                                   icon: const Icon(CupertinoIcons.delete),
                                   onPressed: () {
                                     isDeleteLink = true;
-                                    context.read<Tasks>().removeLinkedTask(
-                                        isNewTask!, key, selectedTaskId);
+                                    context
+                                        .read<Tasks>()
+                                        .removeLinkedTask(key, selectedTaskId);
                                     if (isDeleteLink) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(SnackBar(
@@ -192,17 +183,9 @@ class TaskDetails extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (existingTasks > 1)
-                      CupertinoButton(
-                        onPressed: () {
-                          context.read<Tasks>().toggleAddTaskLinkForm();
-                        },
-                        child: visibility
-                            ? const Text('Hide Links?')
-                            : const Text('Add Links?'),
-                      ),
                     Visibility(
-                      visible: context.watch<Tasks>().visibility,
+                      visible:
+                          context.read<Tasks>().checkLinksEnablementEditForm,
                       child: Column(
                         children: <Widget>[
                           Row(
@@ -275,7 +258,6 @@ class TaskDetails extends StatelessWidget {
                                             _labelController.text) {
                                           addLink = true;
                                           context.read<Tasks>().addLinkedTask(
-                                              isNewTask!,
                                               selectedTaskId,
                                               _taskIdController.text,
                                               _labelController.text);
@@ -294,7 +276,6 @@ class TaskDetails extends StatelessWidget {
                                             labels[0]) {
                                           addLink = true;
                                           context.read<Tasks>().addLinkedTask(
-                                              isNewTask!,
                                               selectedTaskId,
                                               _taskIdController.text,
                                               labels[0]);

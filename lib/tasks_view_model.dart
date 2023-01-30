@@ -53,12 +53,19 @@ class Tasks with ChangeNotifier {
     notifyListeners();
   }
 
-  bool visibility = false;
-
-  toggleAddTaskLinkForm() {
-    visibility = !visibility;
-    notifyListeners();
+  bool checkIsNewTask(String taskId) {
+    bool isNewTask;
+    var task = _tasks.where((element) => element.taskId == taskId).toList();
+    if (task.isNotEmpty) {
+      isNewTask = false;
+    } else {
+      isNewTask = true;
+    }
+    return isNewTask;
   }
+
+  bool get checkLinksEnablementAddForm => _tasks.isNotEmpty;
+  bool get checkLinksEnablementEditForm => _tasks.length > 1;
 
   //Dropdown Menu Task Ids to link tasks
   List<String> allTaskIdDropdownMenuItems = [];
@@ -67,6 +74,7 @@ class Tasks with ChangeNotifier {
   List<String> linkedTaskIds = [];
 
   List<DropdownMenuItem<String>> getTaskIdDropdownMenuItems(String taskId) {
+    linkedTaskIds.clear();
     allTaskIdDropdownMenuItems = _tasks.map((e) => e.taskId).toList();
     var task = _tasks.where((element) => element.taskId == taskId).toList();
     if (task.isNotEmpty && task[0].relationship.isNotEmpty) {
@@ -109,7 +117,8 @@ class Tasks with ChangeNotifier {
     return task;
   }
 
-  addLinkedTask(bool isNewTask, String taskId, String key, String value) {
+  addLinkedTask(String taskId, String key, String value) {
+    bool isNewTask = checkIsNewTask(taskId);
     if (!isNewTask) {
       Task task = _tasks.singleWhere((element) => element.taskId == taskId);
       int index = _tasks.indexOf(task);
@@ -122,7 +131,8 @@ class Tasks with ChangeNotifier {
     notifyListeners();
   }
 
-  removeLinkedTask(bool isNewTask, String key, String taskId) {
+  removeLinkedTask(String key, String taskId) {
+    bool isNewTask = checkIsNewTask(taskId);
     if (!isNewTask) {
       Task task = _tasks.singleWhere((element) => element.taskId == taskId);
       int index = _tasks.indexOf(task);

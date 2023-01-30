@@ -34,10 +34,7 @@ class TaskForm extends StatelessWidget {
     String taskId = UniqueKey().hashCode.toString();
     List<DropdownMenuItem<String>>? taskIdDropdownMenuItems =
         context.read<Tasks>().getTaskIdDropdownMenuItems(taskId);
-    bool isNewTask = true;
     Map<String, String> linkedTasks = context.watch<Tasks>().linkedTasks;
-    var existingTasks = context.watch<Tasks>().tasks.length;
-    var visibility = context.watch<Tasks>().visibility;
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -106,7 +103,7 @@ class TaskForm extends StatelessWidget {
                         _statusController.text = value as String;
                       },
                     ),
-                    if (existingTasks > 0)
+                    if (context.read<Tasks>().checkLinksEnablementAddForm)
                       const Padding(
                         padding: EdgeInsets.only(top: 15),
                         child: Text(
@@ -160,8 +157,9 @@ class TaskForm extends StatelessWidget {
                                   onPressed: () {
                                     isDeleteLink = true;
 
-                                    context.read<Tasks>().removeLinkedTask(
-                                        isNewTask, key, taskId);
+                                    context
+                                        .read<Tasks>()
+                                        .removeLinkedTask(key, taskId);
                                     if (isDeleteLink) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(SnackBar(
@@ -181,17 +179,9 @@ class TaskForm extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (existingTasks > 0)
-                      CupertinoButton(
-                        onPressed: () {
-                          context.read<Tasks>().toggleAddTaskLinkForm();
-                        },
-                        child: visibility
-                            ? const Text('Hide Links?')
-                            : const Text('Add Links?'),
-                      ),
                     Visibility(
-                      visible: visibility,
+                      visible:
+                          context.read<Tasks>().checkLinksEnablementAddForm,
                       child: Column(
                         children: <Widget>[
                           Row(
@@ -264,7 +254,6 @@ class TaskForm extends StatelessWidget {
                                             _labelController.text) {
                                           addLink = true;
                                           context.read<Tasks>().addLinkedTask(
-                                              isNewTask,
                                               taskId,
                                               _taskIdController.text,
                                               _labelController.text);
@@ -283,7 +272,6 @@ class TaskForm extends StatelessWidget {
                                             labels[0]) {
                                           addLink = true;
                                           context.read<Tasks>().addLinkedTask(
-                                              isNewTask,
                                               taskId,
                                               _taskIdController.text,
                                               labels[0]);
@@ -322,9 +310,6 @@ class TaskForm extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        if (visibility) {
-                          context.read<Tasks>().toggleAddTaskLinkForm();
-                        }
                         context.read<Tasks>().addTask(Task(
                             taskId: taskId,
                             taskTitle: _titleController.text,
@@ -338,7 +323,7 @@ class TaskForm extends StatelessWidget {
                           linkedTasks.forEach((key, value) {
                             context
                                 .read<Tasks>()
-                                .addLinkedTask(false, taskId, key, value);
+                                .addLinkedTask(taskId, key, value);
                           });
                         }
                         context.read<Tasks>().clearLinkedTasks();
