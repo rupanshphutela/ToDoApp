@@ -80,7 +80,7 @@ class TaskList extends StatelessWidget {
                 itemCount: filteredTasks.length,
                 itemBuilder: (context, index) {
                   return Dismissible(
-                    key: UniqueKey(),
+                    key: const ValueKey("ListViewKey"),
                     onDismissed: (direction) {
                       taskTitle = filteredTasks[index].taskTitle;
                       var taskId = filteredTasks[index].taskId;
@@ -113,8 +113,10 @@ class TaskList extends StatelessWidget {
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add Task'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home), label: 'Home', tooltip: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.add), label: 'Add Task', tooltip: 'Add Task'),
         ],
         onTap: (index) {
           var route = ModalRoute.of(context);
