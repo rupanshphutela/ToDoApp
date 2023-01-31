@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -140,7 +139,7 @@ class TaskDetails extends StatelessWidget {
                               isThreeLine: true,
                               leading: const CircleAvatar(
                                 backgroundColor: Colors.indigo,
-                                child: Icon(CupertinoIcons.link_circle),
+                                child: Icon(Icons.circle),
                               ),
                               subtitle: InkWell(
                                 child: Text(
@@ -158,7 +157,7 @@ class TaskDetails extends StatelessWidget {
                               trailing: CircleAvatar(
                                 backgroundColor: Colors.brown,
                                 child: IconButton(
-                                  icon: const Icon(CupertinoIcons.delete),
+                                  icon: const Icon(Icons.delete),
                                   onPressed: () {
                                     isDeleteLink = true;
                                     context
@@ -249,7 +248,7 @@ class TaskDetails extends StatelessWidget {
                                 child: CircleAvatar(
                                   backgroundColor: Colors.brown,
                                   child: IconButton(
-                                    icon: const Icon(CupertinoIcons.add),
+                                    icon: const Icon(Icons.add),
                                     onPressed: () {
                                       if (_taskIdController.text.isNotEmpty &&
                                           _labelController.text.isNotEmpty) {
