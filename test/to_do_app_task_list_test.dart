@@ -9,41 +9,43 @@ import 'package:to_do_app/task_list.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 
 const title = 'The To Do App';
-final provider = Tasks();
 
 extension WithScaffold on WidgetTester {
-  pumpWithRouter() async => pumpWidget(ChangeNotifierProvider<Tasks>(
-      create: (context) => provider,
-      child: MaterialApp.router(
-          routerConfig: GoRouter(initialLocation: '/tasks', routes: [
-        GoRoute(
-          path: '/tasks',
-          builder: (context, state) => TaskList(
-            title: '$title - Tasks',
-            state: state.queryParams['state'].toString(),
-          ),
-        ),
-        GoRoute(
-          path: '/task',
-          builder: (context, state) => TaskForm(
-            title: '$title - Task Form',
-          ),
-        ),
-        GoRoute(
-            path: '/taskdetail',
-            builder: (context, state) {
-              final String taskId = state.queryParams['task_id'].toString();
-              return TaskDetails(
-                  selectedTaskId: taskId, title: '$title - Task Details');
-            }),
-      ]))));
+  pumpWithScaffold(provider) async =>
+      await pumpWidget(ChangeNotifierProvider<Tasks>(
+          create: (context) => provider,
+          child: MaterialApp.router(
+              routerConfig: GoRouter(initialLocation: '/tasks', routes: [
+            GoRoute(
+              path: '/tasks',
+              builder: (context, state) => TaskList(
+                title: '$title - Tasks',
+                state: state.queryParams['state'].toString(),
+              ),
+            ),
+            GoRoute(
+              path: '/task',
+              builder: (context, state) => TaskForm(
+                title: '$title - Task Form',
+              ),
+            ),
+            GoRoute(
+                path: '/taskdetail',
+                builder: (context, state) {
+                  final String taskId = state.queryParams['task_id'].toString();
+                  return TaskDetails(
+                      selectedTaskId: taskId, title: '$title - Task Details');
+                }),
+          ]))));
 }
 
 void main() {
   group('The widget that lists all the tasks:', () {
     testWidgets('starts out with no tasks listed', (tester) async {
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      final provider = Tasks();
+
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       final findListView = find.byType(ListView);
@@ -59,10 +61,12 @@ void main() {
     });
 
     testWidgets(
-        'has a button that when clicked tells the navigator/router to go to the widget for creating a new task*',
+        'has a button that when clicked tells the navigator/router to go to the widget for creating a new task',
         (tester) async {
+      final provider = Tasks();
+
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
       //find add task button
       final findAddTaskButton = find.byTooltip('Add Task');
@@ -83,10 +87,11 @@ void main() {
     testWidgets(
         'shows a separate widget for each task when there are tasks to list',
         (tester) async {
-      //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
-      await tester.pumpAndSettle();
+      final provider = Tasks();
 
+      //pump change notifier provider and Material app router
+      await tester.pumpWithScaffold(provider);
+      await tester.pumpAndSettle();
       //Create 2 provider tasks with different status
       for (var index = 0; index < 2; index++) {
         provider.addTask(Task(
@@ -98,7 +103,7 @@ void main() {
             relationship: {}));
       }
       //wait for tasks to create
-      await tester.pump();
+      await tester.pumpAndSettle();
       //finder for number of list tiles
       final findListTile = find.byType(ListTile);
       //matcher to validate number of created tiles
@@ -106,8 +111,10 @@ void main() {
     });
     testWidgets('shows only some of the tasks when a filter is applied.',
         (tester) async {
+      final provider = Tasks();
+
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       final findFilterText = find.text('all');
@@ -141,8 +148,10 @@ void main() {
 
   group('Each task listed in the widget that lists all the tasks:', () {
     testWidgets('Indicates the name of the task', (tester) async {
+      final provider = Tasks();
+
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       //Create 2 provider tasks with different status
@@ -170,11 +179,13 @@ void main() {
     testWidgets(
         'has a button that when clicked tells the navigator/router to go to the widget for editing an existing task',
         (tester) async {
-      await tester.pumpWithRouter();
+      final provider = Tasks();
+
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       //Create 2 provider tasks with different status
-      for (var index = 0; index < 2; index++) {
+      for (var index = 1; index >= 0; index--) {
         provider.addTask(Task(
             taskId: UniqueKey().hashCode.toString(),
             taskTitle: "Dummy Title $index",
@@ -190,7 +201,7 @@ void main() {
       final findListTileLength =
           tester.widgetList<ListTile>(find.byType(ListTile)).length;
 
-      for (var index = findListTileLength - 1; index > 0; index--) {
+      for (var index = 0; index < findListTileLength; index++) {
         final findEditTaskButton = find.byKey(ValueKey("editTaskButton$index"));
         await tester.tap(findEditTaskButton);
         await tester.pumpAndSettle();
@@ -208,12 +219,14 @@ void main() {
     });
   });
 
-  group('The widget for creating a new task*', () {
+  group('The widget for creating a new task', () {
     testWidgets(
         'Produces a task whose title and description match the ones entered by the user, where "produces" means passes the task to a provided view model or to a parent widget via callback or navigation',
         (tester) async {
+      final provider = Tasks();
+
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       //find add task button
@@ -258,11 +271,13 @@ void main() {
     });
   });
 
-  group('The widget for editing an existing task*', () {
+  group('The widget for editing an existing task', () {
     testWidgets('Fills out the title and description of the existing task',
         (tester) async {
+      final provider = Tasks();
+
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       //find add task button
@@ -317,8 +332,10 @@ void main() {
 
     testWidgets('Updates the existing task instead of creating a new task',
         (tester) async {
+      final provider = Tasks();
+
       //pump change notifier provider and Material app router
-      await tester.pumpWithRouter();
+      await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       for (var index = 0; index < 1; index++) {
