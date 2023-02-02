@@ -7,6 +7,7 @@ import 'package:to_do_app/task_details.dart';
 import 'package:to_do_app/task_form.dart';
 import 'package:to_do_app/task_list.dart';
 import 'package:to_do_app/tasks_view_model.dart';
+import 'package:to_do_app/routes.dart';
 
 const title = 'The To Do App';
 
@@ -15,28 +16,8 @@ extension WithScaffold on WidgetTester {
       await pumpWidget(ChangeNotifierProvider<Tasks>(
           create: (context) => provider,
           child: MaterialApp.router(
-              routerConfig: GoRouter(initialLocation: '/tasks', routes: [
-            GoRoute(
-              path: '/tasks',
-              builder: (context, state) => TaskList(
-                title: '$title - Tasks',
-                state: state.queryParams['state'].toString(),
-              ),
-            ),
-            GoRoute(
-              path: '/task',
-              builder: (context, state) => TaskForm(
-                title: '$title - Task Form',
-              ),
-            ),
-            GoRoute(
-                path: '/taskdetail',
-                builder: (context, state) {
-                  final String taskId = state.queryParams['task_id'].toString();
-                  return TaskDetails(
-                      selectedTaskId: taskId, title: '$title - Task Details');
-                }),
-          ]))));
+              routerConfig:
+                  GoRouter(initialLocation: '/tasks', routes: routes))));
 }
 
 void main() {
@@ -49,14 +30,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final findListView = find.byType(ListView);
-      final findListViewInitLength = tester
-          .widgetList<ListView>(find.byKey(const ValueKey("ListViewKey")))
-          .length;
+      final findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+      ;
       final findFilterText = find.text('all');
 
       //matcher to validate listview, its length and filter text
       expect(findListView, findsOneWidget);
-      expect(findListViewInitLength, 0);
+      expect(findListTileLength, 0);
       expect(findFilterText, findsOneWidget);
     });
 
@@ -386,6 +367,46 @@ void main() {
       final findListTile = find.byType(ListTile);
       //matcher for validating that retunring back returns one task tile only
       expect(findListTile, findsNWidgets(1));
+    });
+  });
+
+  group('Bonus Points - Links', () {
+    testWidgets('Users can add links', (tester) async {
+      final provider = Tasks();
+
+      //pump change notifier provider and Material app router
+      await tester.pumpWithScaffold(provider);
+      await tester.pumpAndSettle();
+
+      //create two tasks with open and in progress status
+      for (var index = 0; index < 1; index++) {
+        provider.addTask(Task(
+            taskId: UniqueKey().hashCode.toString(),
+            taskTitle: "Dummy Title $index",
+            description: "Dummy Description $index",
+            status: index == 0 ? "open" : "in progress",
+            lastUpdate: DateTime.now(),
+            relationship: {}));
+      }
+
+      //wait for tasks to create
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Users can remove links', (tester) async {
+      final provider = Tasks();
+
+      //pump change notifier provider and Material app router
+      await tester.pumpWithScaffold(provider);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Users can use links between tasks', (tester) async {
+      final provider = Tasks();
+
+      //pump change notifier provider and Material app router
+      await tester.pumpWithScaffold(provider);
+      await tester.pumpAndSettle();
     });
   });
 }
