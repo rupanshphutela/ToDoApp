@@ -20,6 +20,9 @@ class MyApp extends StatelessWidget {
       create: (context) => Tasks(),
       child: MaterialApp.router(
         title: title,
+        // routeInformationProvider: myGoRouter.routeInformationProvider,
+        // routeInformationParser: myGoRouter.routeInformationParser,
+        // routerDelegate: myGoRouter.routerDelegate,
         theme: ThemeData(
           primarySwatch: Colors.teal,
         ),
