@@ -190,7 +190,7 @@ void main() {
       final findListTileLength =
           tester.widgetList<ListTile>(find.byType(ListTile)).length;
 
-      for (var index = findListTileLength - 1; index <= 0; index--) {
+      for (var index = findListTileLength - 1; index > 0; index--) {
         final findEditTaskButton = find.byKey(ValueKey("editTaskButton$index"));
         await tester.tap(findEditTaskButton);
         await tester.pumpAndSettle();
@@ -238,7 +238,7 @@ void main() {
       expect(findAddTaskSubmitForm, findsOneWidget);
 
       const taskTitle = 'Dummy Title';
-      const taskDescription = 'Dummy Title';
+      const taskDescription = 'Dummy Description';
 
       await tester.enterText(findTaskTitleInputField, taskTitle);
       await tester.enterText(findTaskDescriptionInputField, taskDescription);
@@ -255,6 +255,120 @@ void main() {
       //matchers
       expect(findListTileLength, 1);
       expect(find.text('Dummy Title'), findsOneWidget);
+    });
+  });
+
+  group('The widget for editing an existing task*', () {
+    testWidgets('Fills out the title and description of the existing task',
+        (tester) async {
+      //pump change notifier provider and Material app router
+      await tester.pumpWithRouter();
+      await tester.pumpAndSettle();
+
+      //find add task button
+      final findAddTaskButton = find.byTooltip('Add Task');
+
+      //matcher
+      expect(findAddTaskButton, findsOneWidget);
+
+      //tap the Add Task button
+      await tester.tap(findAddTaskButton);
+      await tester.pumpAndSettle();
+
+      final findTaskTitleInputField =
+          find.byKey(const ValueKey("taskTitleInput"));
+      final findTaskDescriptionInputField =
+          find.byKey(const ValueKey("taskDescriptionInput"));
+      final findAddTaskSubmitForm =
+          find.byKey(const ValueKey("addTaskSubmitForm"));
+
+      expect(findTaskTitleInputField, findsOneWidget);
+      expect(findTaskDescriptionInputField, findsOneWidget);
+      expect(findAddTaskSubmitForm, findsOneWidget);
+
+      const taskTitle = 'Dummy Title';
+      const taskDescription = 'Dummy Description';
+
+      await tester.enterText(findTaskTitleInputField, taskTitle);
+      await tester.enterText(findTaskDescriptionInputField, taskDescription);
+
+      await tester.tap(findAddTaskSubmitForm);
+      await tester.pumpAndSettle();
+
+      //Matcher to validate redirect to TaskLists page
+      expect(findAddTaskButton, findsOneWidget);
+
+      final findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      //matchers
+      expect(findListTileLength, 1);
+      expect(find.text('Dummy Title'), findsOneWidget);
+
+      for (var index = findListTileLength - 1; index > 0; index--) {
+        final findEditTaskButton = find.byKey(ValueKey("editTaskButton$index"));
+        await tester.tap(findEditTaskButton);
+        await tester.pumpAndSettle();
+        //matcher
+        expect(find.text(taskTitle), findsOneWidget);
+        expect(find.text(taskDescription), findsOneWidget);
+      }
+    });
+
+    testWidgets('Updates the existing task instead of creating a new task',
+        (tester) async {
+      //pump change notifier provider and Material app router
+      await tester.pumpWithRouter();
+      await tester.pumpAndSettle();
+
+      for (var index = 0; index < 1; index++) {
+        provider.addTask(Task(
+            taskId: UniqueKey().hashCode.toString(),
+            taskTitle: "Dummy Title $index",
+            description: "Dummy Description $index",
+            status: index == 0 ? "open" : "in progress",
+            lastUpdate: DateTime.now(),
+            relationship: {}));
+      }
+
+      //wait for tasks to create
+      await tester.pumpAndSettle();
+
+      final findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      //matchers
+      expect(findListTileLength, 1);
+      expect(find.text('Dummy Title 0'), findsOneWidget);
+
+      for (var index = findListTileLength - 1; index > 0; index--) {
+        final findEditTaskButton = find.byKey(ValueKey("editTaskButton$index"));
+        await tester.tap(findEditTaskButton);
+        await tester.pumpAndSettle();
+        //matcher
+        expect(find.text('Dummy Title $index'), findsOneWidget);
+        expect(find.text('Dummy Description $index'), findsOneWidget);
+      }
+
+      final findStatusText = find.text('all');
+
+      //tap the dropdown
+      await tester.tap(findStatusText);
+      //wait for operation to finish
+      await tester.pumpAndSettle();
+      //find the open text in dropdown and tap it
+      await tester.tap(find.text('in progress').last);
+      //wait for operation to finish
+      await tester.pumpAndSettle();
+
+      //goback on tapping back
+      await tester.tap(find.byTooltip('Back'));
+      //wait for operation to finish
+      await tester.pumpAndSettle();
+      //find element on previous page
+      final findListTile = find.byType(ListTile);
+      //matcher for validating that retunring back returns one task tile only
+      expect(findListTile, findsNWidgets(1));
     });
   });
 }
