@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:to_do_app/task.dart';
 import 'package:to_do_app/task_details.dart';
 import 'package:to_do_app/task_form.dart';
 import 'package:to_do_app/task_list.dart';
@@ -80,5 +81,22 @@ void main() {
     await tester.pumpAndSettle();
     //matcher for validating that back worked
     expect(findListView, findsOneWidget);
+
+    //Create 2 provider tasks with different status
+    for (var index = 1; index <= 2; index++) {
+      provider.addTask(Task(
+          taskId: UniqueKey().hashCode.toString(),
+          taskTitle: "Dummy Title $index",
+          description: "Dummy Description $index",
+          status: index == 1 ? "open" : "in progress",
+          lastUpdate: DateTime.now(),
+          relationship: {}));
+    }
+    //wait for tasks to create
+    await tester.pump();
+    //finder for number of list tiles
+    final findListTile = find.byType(ListTile);
+    //matcher to validate number of created tiles
+    expect(findListTile, findsNWidgets(2));
   });
 }
