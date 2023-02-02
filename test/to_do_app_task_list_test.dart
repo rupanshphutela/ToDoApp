@@ -98,5 +98,16 @@ void main() {
     final findListTile = find.byType(ListTile);
     //matcher to validate number of created tiles
     expect(findListTile, findsNWidgets(2));
+
+    //tap the dropdown
+    await tester.tap(findFilterText);
+    //wait for operation to finish
+    await tester.pumpAndSettle();
+    //find the open text in dropdown and tap it
+    await tester.tap(find.text('open').last);
+    //wait for operation to finish
+    await tester.pumpAndSettle();
+    //Matcher to validate finding one ListTile
+    expect(findListTile, findsNWidgets(1));
   });
 }
