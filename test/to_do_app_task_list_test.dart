@@ -207,4 +207,54 @@ void main() {
       }
     });
   });
+
+  group('The widget for creating a new task*', () {
+    testWidgets(
+        'Produces a task whose title and description match the ones entered by the user, where "produces" means passes the task to a provided view model or to a parent widget via callback or navigation',
+        (tester) async {
+      //pump change notifier provider and Material app router
+      await tester.pumpWithRouter();
+      await tester.pumpAndSettle();
+
+      //find add task button
+      final findAddTaskButton = find.byTooltip('Add Task');
+
+      //matcher
+      expect(findAddTaskButton, findsOneWidget);
+
+      //tap the Add Task button
+      await tester.tap(findAddTaskButton);
+      await tester.pumpAndSettle();
+
+      final findTaskTitleInputField =
+          find.byKey(const ValueKey("taskTitleInput"));
+      final findTaskDescriptionInputField =
+          find.byKey(const ValueKey("taskDescriptionInput"));
+      final findAddTaskSubmitForm =
+          find.byKey(const ValueKey("addTaskSubmitForm"));
+
+      expect(findTaskTitleInputField, findsOneWidget);
+      expect(findTaskDescriptionInputField, findsOneWidget);
+      expect(findAddTaskSubmitForm, findsOneWidget);
+
+      const taskTitle = 'Dummy Title';
+      const taskDescription = 'Dummy Title';
+
+      await tester.enterText(findTaskTitleInputField, taskTitle);
+      await tester.enterText(findTaskDescriptionInputField, taskDescription);
+
+      await tester.tap(findAddTaskSubmitForm);
+      await tester.pumpAndSettle();
+
+      //Matcher to validate redirect to TaskLists page
+      expect(findAddTaskButton, findsOneWidget);
+
+      final findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      //matchers
+      expect(findListTileLength, 1);
+      expect(find.text('Dummy Title'), findsOneWidget);
+    });
+  });
 }
