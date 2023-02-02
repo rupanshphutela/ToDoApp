@@ -50,6 +50,7 @@ class TaskForm extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     TextFormField(
+                      key: const ValueKey("taskTitleInput"),
                       maxLines: 1,
                       maxLength: 20,
                       controller: _titleController,
@@ -65,6 +66,7 @@ class TaskForm extends StatelessWidget {
                       },
                     ),
                     TextFormField(
+                      key: const ValueKey("taskDescriptionInput"),
                       maxLines: 4,
                       maxLength: 50,
                       controller: _descriptionController,
@@ -307,6 +309,7 @@ class TaskForm extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   ElevatedButton(
+                    key: const ValueKey("addTaskSubmitForm"),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
                         context.read<Tasks>().addTask(Task(
