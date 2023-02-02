@@ -96,13 +96,23 @@ class TaskList extends StatelessWidget {
                       leading: const CircleAvatar(
                         backgroundColor: Color(0xff764abc),
                       ),
-                      title: Text(filteredTasks[index].taskTitle),
+                      title: Text(filteredTasks[index].taskTitle,
+                          key: ValueKey("ListTile $index Title")),
                       subtitle: Text(
                           'Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
-                      onTap: () {
-                        var taskId = filteredTasks[index].taskId;
-                        context.push('/taskdetail?task_id=$taskId');
-                      },
+                      trailing: CircleAvatar(
+                        key: ValueKey("editTaskButton$index"),
+                        backgroundColor: Colors.brown,
+                        child: IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () {
+                            debugPrint(
+                                "value key for edit button value $index");
+                            var taskId = filteredTasks[index].taskId;
+                            context.push('/taskdetail?task_id=$taskId');
+                          },
+                        ),
+                      ),
                     ),
                   );
                 },
