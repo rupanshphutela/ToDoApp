@@ -1,6 +1,3 @@
-/**Does not find ListView or a thing 
- * https://guillaume.bernos.dev/testing-go-router/
-*/
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
