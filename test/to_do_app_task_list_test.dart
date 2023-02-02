@@ -73,5 +73,12 @@ void main() {
 
     //matcher
     expect(findTextFormFields, findsNWidgets(2));
+
+    //goback on tapping back
+    await tester.tap(find.byTooltip('Back'));
+    //wait for operation to finish
+    await tester.pumpAndSettle();
+    //matcher for validating that back worked
+    expect(findListView, findsOneWidget);
   });
 }
