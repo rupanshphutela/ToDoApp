@@ -377,11 +377,12 @@ void main() {
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
-
+      var taskId = "";
       //create two tasks with open and in progress status
-      for (var index = 0; index < 1; index++) {
+      for (var index = 0; index < 2; index++) {
+        taskId = UniqueKey().hashCode.toString();
         provider.addTask(Task(
-            taskId: UniqueKey().hashCode.toString(),
+            taskId: taskId,
             taskTitle: "Dummy Title $index",
             description: "Dummy Description $index",
             status: index == 0 ? "open" : "in progress",
@@ -391,6 +392,32 @@ void main() {
 
       //wait for tasks to create
       await tester.pumpAndSettle();
+
+      final findEditTaskButton = find.byKey(const ValueKey("editTaskButton1"));
+      await tester.tap(findEditTaskButton);
+      await tester.pumpAndSettle();
+
+      final findTaskIdDropdown = find.byKey(const ValueKey("taskIdDropdown"));
+      await tester.tap(findTaskIdDropdown);
+      await tester.pumpAndSettle();
+
+      var findTaskIdValue = find.text(taskId).last;
+      await tester.tap(findTaskIdValue);
+      await tester.pumpAndSettle();
+
+      var findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 0);
+
+      var findIconButton = find.byKey(const ValueKey("addLinkedTaskButton"));
+      await tester.tap(findIconButton);
+      await tester.pumpAndSettle();
+
+      findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 1);
     });
 
     testWidgets('Users can remove links', (tester) async {
@@ -399,6 +426,58 @@ void main() {
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
+      var taskId = "";
+      //create two tasks with open and in progress status
+      for (var index = 0; index < 2; index++) {
+        taskId = UniqueKey().hashCode.toString();
+        provider.addTask(Task(
+            taskId: taskId,
+            taskTitle: "Dummy Title $index",
+            description: "Dummy Description $index",
+            status: index == 0 ? "open" : "in progress",
+            lastUpdate: DateTime.now(),
+            relationship: {}));
+      }
+
+      //wait for tasks to create
+      await tester.pumpAndSettle();
+
+      final findEditTaskButton = find.byKey(const ValueKey("editTaskButton1"));
+      await tester.tap(findEditTaskButton);
+      await tester.pumpAndSettle();
+
+      final findTaskIdDropdown = find.byKey(const ValueKey("taskIdDropdown"));
+      await tester.tap(findTaskIdDropdown);
+      await tester.pumpAndSettle();
+
+      var findTaskIdValue = find.text(taskId).last;
+      await tester.tap(findTaskIdValue);
+      await tester.pumpAndSettle();
+
+      var findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 0);
+
+      var findAddLinkedTaskButton =
+          find.byKey(const ValueKey("addLinkedTaskButton"));
+      await tester.tap(findAddLinkedTaskButton);
+      await tester.pumpAndSettle();
+
+      findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 1);
+
+      final findDeleteLinkedTaskButton =
+          find.byKey(const ValueKey('deleteLinkedTask0'));
+      await tester.tap(findDeleteLinkedTaskButton);
+      await tester.pumpAndSettle();
+
+      findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 0);
     });
 
     testWidgets('Users can use links between tasks', (tester) async {
@@ -407,6 +486,55 @@ void main() {
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
+      var taskId = "";
+      //create two tasks with open and in progress status
+      for (var index = 0; index < 2; index++) {
+        taskId = UniqueKey().hashCode.toString();
+        provider.addTask(Task(
+            taskId: taskId,
+            taskTitle: "Dummy Title $index",
+            description: "Dummy Description $index",
+            status: index == 0 ? "open" : "in progress",
+            lastUpdate: DateTime.now(),
+            relationship: {}));
+      }
+
+      //wait for tasks to create
+      await tester.pumpAndSettle();
+
+      final findEditTaskButton = find.byKey(const ValueKey("editTaskButton1"));
+      await tester.tap(findEditTaskButton);
+      await tester.pumpAndSettle();
+
+      final findTaskIdDropdown = find.byKey(const ValueKey("taskIdDropdown"));
+      await tester.tap(findTaskIdDropdown);
+      await tester.pumpAndSettle();
+
+      var findTaskIdValue = find.text(taskId).last;
+      await tester.tap(findTaskIdValue);
+      await tester.pumpAndSettle();
+
+      var expectedLinkedTaskTitle = provider.getTaskDetails(taskId).taskTitle;
+
+      var findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 0);
+
+      var findAddLinkedTaskButton =
+          find.byKey(const ValueKey("addLinkedTaskButton"));
+      await tester.tap(findAddLinkedTaskButton);
+      await tester.pumpAndSettle();
+
+      findListTileLength =
+          tester.widgetList<ListTile>(find.byType(ListTile)).length;
+
+      expect(findListTileLength, 1);
+      var findLinkedTaskLink = find.byKey(const ValueKey("linkedTaskLink0"));
+      await tester.tap(findLinkedTaskLink);
+      await tester.pumpAndSettle();
+
+      expect(find.text(expectedLinkedTaskTitle), findsOneWidget);
     });
   });
 }
