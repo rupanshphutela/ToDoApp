@@ -106,8 +106,6 @@ class TaskList extends StatelessWidget {
                         child: IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () {
-                            debugPrint(
-                                "value key for edit button value $index");
                             var taskId = filteredTasks[index].taskId;
                             context.push('/taskdetail?task_id=$taskId');
                           },

@@ -142,6 +142,7 @@ class TaskDetails extends StatelessWidget {
                                 child: Icon(Icons.circle),
                               ),
                               subtitle: InkWell(
+                                key: ValueKey("linkedTaskLink$index"),
                                 child: Text(
                                   '$key - $taskTitle',
                                   style: const TextStyle(
@@ -155,6 +156,7 @@ class TaskDetails extends StatelessWidget {
                                 },
                               ),
                               trailing: CircleAvatar(
+                                key: ValueKey('deleteLinkedTask$index'),
                                 backgroundColor: Colors.brown,
                                 child: IconButton(
                                   icon: const Icon(Icons.delete),
@@ -224,6 +226,8 @@ class TaskDetails extends StatelessWidget {
                                       0.02),
                               Flexible(
                                 child: DropdownButtonFormField(
+                                  key: const ValueKey("taskIdDropdown"),
+
                                   value: _taskIdController.text.isNotEmpty
                                       ? _taskIdController.text
                                       : null,
@@ -244,6 +248,7 @@ class TaskDetails extends StatelessWidget {
                                   width: (MediaQuery.of(context).size.width) *
                                       0.02),
                               Flexible(
+                                key: const ValueKey("addLinkedTaskButton"),
                                 flex: 0,
                                 child: CircleAvatar(
                                   backgroundColor: Colors.brown,
