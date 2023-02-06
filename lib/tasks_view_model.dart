@@ -10,7 +10,7 @@ class Tasks with ChangeNotifier {
   List<Task> get tasks => _tasks.toList();
 
   Task getTaskDetails(String taskId) {
-    return _tasks.singleWhere((element) => element.taskId == taskId);
+    return _tasks.singleWhere((element) => taskId.contains(element.taskId));
   }
 
   List<Task> filteredTasks() {
@@ -92,7 +92,7 @@ class Tasks with ChangeNotifier {
                   .contains(taskIdMenuItem),
               value: taskIdMenuItem,
               child: Text(
-                getTaskDetails(taskIdMenuItem).taskTitle,
+                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem).taskTitle}",
                 style: TextStyle(
                   color: allTaskIdDropdownMenuItems
                           .where((element) => !linkedTaskIds.contains(element))

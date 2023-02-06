@@ -97,7 +97,7 @@ class TaskList extends StatelessWidget {
                       title: Text(filteredTasks[index].taskTitle,
                           key: ValueKey("ListTile $index Title")),
                       subtitle: Text(
-                          'Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
+                          'Task ID: ${filteredTasks[index].taskId}, \nLast Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
                       trailing: CircleAvatar(
                         key: ValueKey("editTaskButton$index"),
                         backgroundColor: Colors.brown,

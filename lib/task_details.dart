@@ -103,8 +103,12 @@ class TaskDetails extends StatelessWidget {
                         );
                       }).toList(),
                     ),
-                    Text(
-                      'Last updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
+                    Padding(
+                      padding: const EdgeInsets.only(top: 15),
+                      child: Text(
+                        'Task ID: ${selectedTask.taskId}, \nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
                     if (context.read<Tasks>().checkLinksEnablementEditForm)
                       const Padding(
@@ -143,7 +147,7 @@ class TaskDetails extends StatelessWidget {
                               ),
                               subtitle: InkWell(
                                 child: Text(
-                                  taskTitle,
+                                  '$key: $taskTitle',
                                   style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 18,
