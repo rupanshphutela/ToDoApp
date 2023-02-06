@@ -401,7 +401,7 @@ void main() {
       await tester.tap(findTaskIdDropdown);
       await tester.pumpAndSettle();
 
-      var findTaskIdValue = find.text(taskId).last;
+      var findTaskIdValue = find.text("Dummy Title 1").last;
       await tester.tap(findTaskIdValue);
       await tester.pumpAndSettle();
 
@@ -450,7 +450,7 @@ void main() {
       await tester.tap(findTaskIdDropdown);
       await tester.pumpAndSettle();
 
-      var findTaskIdValue = find.text(taskId).last;
+      var findTaskIdValue = find.text("Dummy Title 1").last;
       await tester.tap(findTaskIdValue);
       await tester.pumpAndSettle();
 
@@ -510,7 +510,7 @@ void main() {
       await tester.tap(findTaskIdDropdown);
       await tester.pumpAndSettle();
 
-      var findTaskIdValue = find.text(taskId).last;
+      var findTaskIdValue = find.text("Dummy Title 1").last;
       await tester.tap(findTaskIdValue);
       await tester.pumpAndSettle();
 

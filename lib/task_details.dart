@@ -94,7 +94,7 @@ class TaskDetails extends StatelessWidget {
                         }
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(
-                                'Task "${selectedTask.taskTitle}" status updated to $selectedStatus')));
+                                'TaskId "${selectedTask.taskId}" with title "${selectedTask.taskTitle}" status updated to $selectedStatus')));
                       },
                       items: statuses.map((statusValue) {
                         return DropdownMenuItem(
@@ -142,37 +142,50 @@ class TaskDetails extends StatelessWidget {
                                 child: Icon(Icons.circle),
                               ),
                               subtitle: InkWell(
-                                key: ValueKey("linkedTaskLink$index"),
                                 child: Text(
-                                  '$key - $taskTitle',
+                                  taskTitle,
                                   style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 18,
                                   ),
                                 ),
-                                onTap: () {
-                                  context.read<Tasks>().clearLinkedTaskIds();
-                                  context.push('/taskdetail?task_id=$key');
-                                },
                               ),
-                              trailing: CircleAvatar(
-                                key: ValueKey('deleteLinkedTask$index'),
-                                backgroundColor: Colors.brown,
-                                child: IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    isDeleteLink = true;
-                                    context
-                                        .read<Tasks>()
-                                        .removeLinkedTask(key, selectedTaskId);
-                                    if (isDeleteLink) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text(
-                                                  'Link to task $key removed')));
-                                    }
-                                  },
-                                ),
+                              trailing: Wrap(
+                                spacing: 12,
+                                children: <Widget>[
+                                  CircleAvatar(
+                                    key: ValueKey("linkedTaskLink$index"),
+                                    backgroundColor: Colors.brown,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.edit),
+                                      onPressed: () {
+                                        context
+                                            .read<Tasks>()
+                                            .clearLinkedTaskIds();
+                                        context
+                                            .push('/taskdetail?task_id=$key');
+                                      },
+                                    ),
+                                  ),
+                                  CircleAvatar(
+                                    key: ValueKey('deleteLinkedTask$index'),
+                                    backgroundColor: Colors.brown,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () {
+                                        isDeleteLink = true;
+                                        context.read<Tasks>().removeLinkedTask(
+                                            key, selectedTaskId);
+                                        if (isDeleteLink) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(
+                                                  content: Text(
+                                                      'Link to taskId "$key" with title "$taskTitle" removed')));
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
                               title: Text(
                                 currentlyLinkedTasks[key]!,
@@ -269,7 +282,7 @@ class TaskDetails extends StatelessWidget {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
                                                   content: Text(
-                                                      'Relation "${currentlyLinkedTasks[_taskIdController.text]}" already present for task - ${_taskIdController.text}')));
+                                                      'Relation "${currentlyLinkedTasks[_taskIdController.text]}" already present for taskId "${_taskIdController.text}" with title "${context.read<Tasks>().getTaskDetails(_taskIdController.text).taskTitle}"')));
                                         }
                                       } else if (_taskIdController
                                               .text.isNotEmpty &&
@@ -287,14 +300,14 @@ class TaskDetails extends StatelessWidget {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
                                                   content: Text(
-                                                      'Relation "${currentlyLinkedTasks[_taskIdController.text]}" already present for task ${_taskIdController.text}')));
+                                                      'Relation "${currentlyLinkedTasks[_taskIdController.text]}" already present for taskId "${_taskIdController.text}" with title "${context.read<Tasks>().getTaskDetails(_taskIdController.text).taskTitle}"')));
                                         }
                                       }
                                       if (addLink) {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for task "${_taskIdController.text}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "${_taskIdController.text}" with title "${context.read<Tasks>().getTaskDetails(_taskIdController.text).taskTitle}" added')));
                                       }
                                     },
                                   ),

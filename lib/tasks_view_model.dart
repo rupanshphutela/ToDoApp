@@ -92,7 +92,7 @@ class Tasks with ChangeNotifier {
                   .contains(taskIdMenuItem),
               value: taskIdMenuItem,
               child: Text(
-                taskIdMenuItem,
+                getTaskDetails(taskIdMenuItem).taskTitle,
                 style: TextStyle(
                   color: allTaskIdDropdownMenuItems
                           .where((element) => !linkedTaskIds.contains(element))
