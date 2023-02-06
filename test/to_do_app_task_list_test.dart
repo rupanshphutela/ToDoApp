@@ -3,9 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:to_do_app/task.dart';
-import 'package:to_do_app/task_details.dart';
-import 'package:to_do_app/task_form.dart';
-import 'package:to_do_app/task_list.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 import 'package:to_do_app/routes.dart';
 
@@ -32,7 +29,7 @@ void main() {
       final findListView = find.byType(ListView);
       final findListTileLength =
           tester.widgetList<ListTile>(find.byType(ListTile)).length;
-      ;
+
       final findFilterText = find.text('all');
 
       //matcher to validate listview, its length and filter text

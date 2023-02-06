@@ -84,8 +84,6 @@ class TaskList extends StatelessWidget {
                     onDismissed: (direction) {
                       taskTitle = filteredTasks[index].taskTitle;
                       var taskId = filteredTasks[index].taskId;
-                      int modifiedIndex =
-                          taskList.indexWhere((item) => item.taskId == taskId);
                       filteredTasks
                           .removeWhere((element) => element.taskId == taskId);
                       context.read<Tasks>().deleteTask(taskId);
