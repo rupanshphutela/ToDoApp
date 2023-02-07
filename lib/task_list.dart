@@ -75,12 +75,13 @@ class TaskList extends StatelessWidget {
             ),
             Center(
               child: ListView.builder(
+                key: const ValueKey("ListViewKey"),
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
                 itemCount: filteredTasks.length,
                 itemBuilder: (context, index) {
                   return Dismissible(
-                    key: const ValueKey("ListViewKey"),
+                    key: UniqueKey(),
                     onDismissed: (direction) {
                       taskTitle = filteredTasks[index].taskTitle;
                       var taskId = filteredTasks[index].taskId;
