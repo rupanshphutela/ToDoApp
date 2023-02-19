@@ -3,7 +3,7 @@ import 'package:to_do_app/task_details.dart';
 import 'package:to_do_app/task_form.dart';
 import 'package:to_do_app/task_list.dart';
 
-const title = 'The To Do App';
+const title = 'The To-Do App';
 
 final routes = [
   GoRoute(
@@ -23,7 +23,7 @@ final routes = [
   GoRoute(
       path: '/taskdetail',
       builder: (context, state) {
-        final String taskId = state.queryParams['task_id'].toString();
+        final int taskId = int.parse(state.queryParams['task_id'].toString());
         return TaskDetails(
             selectedTaskId: taskId, title: '$title - Task Details');
       }),

@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:to_do_app/task.dart';
+import 'package:to_do_app/models/task.dart';
+import 'package:to_do_app/models/task_link.dart';
+import 'package:to_do_app/models_dao/app_database.dart';
 
 class Tasks with ChangeNotifier {
+  final AppDatabase _database;
+
+  Tasks(this._database);
   //All about tasks
-  final List<Task> _tasks = [];
-  List<Task> _filteredList = [];
-  int _thisTaskIndex = 0;
+  List<Task> _tasks = [];
 
   List<Task> get tasks => _tasks.toList();
+  // bool created = true;
 
-  Task getTaskDetails(String taskId) {
-    return _tasks.singleWhere((element) => taskId.contains(element.taskId));
-  }
-
-  List<Task> filteredTasks() {
-    _filteredList = _tasks.toList();
-    return _filteredList.toList();
-  }
-
-  getLatestTask() => _tasks[_thisTaskIndex];
-
-  addTask(Task task) {
-    _tasks.insert(0, task);
-    _thisTaskIndex = _tasks.indexOf(task);
+  void getAllTasks() async {
+    // if (created == true) {
+    // created = false;
+    // for (var index = 0; index < 4; index++) {
+    //   await addTask(
+    //       Task(
+    //           ownerId: 0,
+    //           taskTitle: "Dummy Title $index",
+    //           description: "Dummy Description $index",
+    //           status: index == 0 ? "open" : "in progress",
+    //           lastUpdate: DateTime.now().toString()),
+    //       linkedTasks);
+    // }
+    // }
+    _tasks = await _database.taskDao.getAllTasks();
+    _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     notifyListeners();
   }
 
@@ -34,28 +40,39 @@ class Tasks with ChangeNotifier {
     }
   }
 
-  updateSelectedTask(String selectedTaskId, String selectedStatus,
-      Map<String, String> currentlyLinkedTasks) {
-    _thisTaskIndex =
-        _tasks.indexWhere((element) => element.taskId == selectedTaskId);
-    _tasks[_thisTaskIndex].status = selectedStatus;
-    _tasks[_thisTaskIndex].lastUpdate = DateTime.now();
-    _tasks[_thisTaskIndex].relationship = currentlyLinkedTasks;
-    _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
+  deleteTask(int taskId) async {
+    _tasks.removeWhere((element) => element.id == taskId);
+    await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
+    await _database.taskDao.deleteTask(taskId);
+    getAllTasks();
+    getCurrentlyLinkedTasks(taskId);
     notifyListeners();
   }
 
-  deleteTask(String taskId) {
-    for (var element in _tasks) {
-      element.relationship.removeWhere((key, value) => key == taskId);
+  addTask(Task task, List<TaskLink?> linkedTasks) async {
+    await _database.taskDao.insertTask(task);
+    if (linkedTasks.isNotEmpty) {
+      int? latestTaskId =
+          await _database.taskDao.findLatestTaskIdByOwner(task.ownerId);
+      for (var element in linkedTasks) {
+        await _database.taskLinkDao.insertTaskLink(TaskLink(
+            taskId: latestTaskId!,
+            relation: element!.relation,
+            linkedTaskId: element.linkedTaskId,
+            lastUpdate: DateTime.now().toString()));
+      }
     }
-    _tasks.removeWhere((element) => element.taskId == taskId);
+    getAllTasks();
+    clearLinkedTasks();
     notifyListeners();
   }
 
-  bool checkIsNewTask(String taskId) {
+  //Linked Tasks to show linked tasks
+  List<TaskLink?> linkedTasks = [];
+
+  bool checkIsNewTask(int taskId) {
     bool isNewTask;
-    var task = _tasks.where((element) => element.taskId == taskId).toList();
+    var task = _tasks.where((element) => element.id == taskId).toList();
     if (task.isNotEmpty) {
       isNewTask = false;
     } else {
@@ -64,23 +81,69 @@ class Tasks with ChangeNotifier {
     return isNewTask;
   }
 
-  bool get checkLinksEnablementAddForm => _tasks.isNotEmpty;
-  bool get checkLinksEnablementEditForm => _tasks.length > 1;
+  addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) async {
+    bool isNewTask = checkIsNewTask(primaryTaskId);
+    if (!isNewTask) {
+      //create linked task with new time
+      await _database.taskLinkDao.insertTaskLink(TaskLink(
+          taskId: primaryTaskId,
+          relation: relation,
+          linkedTaskId: linkedTaskId,
+          lastUpdate: DateTime.now().toString()));
+      //Update main task with current time
+      await _database.taskDao
+          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
+      getCurrentlyLinkedTasks(primaryTaskId);
+      getAllTasks();
+    } else {
+      linkedTasks.add(TaskLink(
+          taskId: 9999,
+          relation: relation,
+          linkedTaskId: linkedTaskId,
+          lastUpdate: DateTime.now().toString()));
+    }
+    notifyListeners();
+  }
+
+  removeLinkedTask(int linkedTaskId, int primaryTaskId) async {
+    bool isNewTask = checkIsNewTask(primaryTaskId);
+    if (!isNewTask) {
+      //delete linked task from linked tasks table
+      await _database.taskLinkDao.deleteLinkedTask(linkedTaskId, primaryTaskId);
+      //update date/time in main task table
+      await _database.taskDao
+          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
+      getAllTasks();
+      linkedTaskIds.remove(linkedTaskId);
+    } else {
+      linkedTasks
+          .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
+      linkedTaskIds.remove(linkedTaskId);
+    }
+    notifyListeners();
+  }
+
+  Task getTaskDetails(int taskId) {
+    return _tasks.where((element) => taskId == element.id).first;
+  }
 
   //Dropdown Menu Task Ids to link tasks
-  List<String> allTaskIdDropdownMenuItems = [];
+  List<int> allTaskIdDropdownMenuItems = [];
 
-  List<DropdownMenuItem<String>> taskIdDropdownMenuItems = [];
-  List<String> linkedTaskIds = [];
+  List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
+  List<int> linkedTaskIds = [];
 
-  List<DropdownMenuItem<String>> getTaskIdDropdownMenuItems(String taskId) {
+  List<DropdownMenuItem<int>> getTaskIdDropdownMenuItems(int taskId) {
     linkedTaskIds.clear();
-    allTaskIdDropdownMenuItems = _tasks.map((e) => e.taskId).toList();
-    var task = _tasks.where((element) => element.taskId == taskId).toList();
-    if (task.isNotEmpty && task[0].relationship.isNotEmpty) {
-      linkedTaskIds = task[0].relationship.keys.toList();
+    allTaskIdDropdownMenuItems = _tasks.map((e) => e.id!).toList();
+    var task = _tasks.where((element) => element.id == taskId).toList();
+    if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
+      linkedTaskIds
+          .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
     } else if (task.isEmpty && linkedTasks.isNotEmpty) {
-      linkedTaskIds = linkedTasks.keys.toList();
+      for (var linkedTask in linkedTasks) {
+        linkedTaskIds.add(linkedTask!.linkedTaskId);
+      }
     }
 
     allTaskIdDropdownMenuItems.remove(taskId);
@@ -107,49 +170,27 @@ class Tasks with ChangeNotifier {
     return taskIdDropdownMenuItems;
   }
 
-  //Linked Tasks to show linked tasks
-  Map<String, String> linkedTasks = {};
-  Map<String, String> currentlyLinkedTasks = {};
+  List<TaskLink?> currentlyLinkedTasks = [];
 
-  Map<String, String> getCurrentlyLinkedTasks(String taskId) {
-    Map<String, String> task =
-        _tasks.singleWhere((element) => element.taskId == taskId).relationship;
-    return task;
-  }
-
-  addLinkedTask(String taskId, String key, String value) {
-    bool isNewTask = checkIsNewTask(taskId);
-    if (!isNewTask) {
-      Task task = _tasks.singleWhere((element) => element.taskId == taskId);
-      int index = _tasks.indexOf(task);
-      _tasks[index].relationship[key] = value;
-      _tasks[index].lastUpdate = DateTime.now();
-      _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
-    } else {
-      linkedTasks[key] = value;
-    }
+  void getCurrentlyLinkedTasks(int taskId) async {
+    currentlyLinkedTasks =
+        await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
+    currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
     notifyListeners();
   }
 
-  removeLinkedTask(String key, String taskId) {
-    bool isNewTask = checkIsNewTask(taskId);
-    if (!isNewTask) {
-      Task task = _tasks.singleWhere((element) => element.taskId == taskId);
-      int index = _tasks.indexOf(task);
-      _tasks[index].relationship.remove(key);
-      _tasks[index].lastUpdate = DateTime.now();
-      _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
-      linkedTaskIds.remove(key);
-    } else {
-      linkedTasks.remove(key);
-      linkedTaskIds.remove(key);
-    }
+  updateSelectedTask(int selectedTaskId, String selectedStatus) async {
+    await _database.taskDao.updateTaskStatusAndTime(
+        selectedTaskId, selectedStatus, DateTime.now().toString());
+    getAllTasks();
     notifyListeners();
   }
+
+  bool get checkLinksEnablementAddForm => _tasks.isNotEmpty;
+  bool get checkLinksEnablementEditForm => _tasks.length > 1;
 
   clearLinkedTasks() {
     linkedTasks.clear();
-    currentlyLinkedTasks.clear();
     notifyListeners();
   }
 

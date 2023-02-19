@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:to_do_app/task.dart';
+import 'package:to_do_app/models/task.dart';
+import 'package:to_do_app/models/task_link.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
@@ -13,6 +14,10 @@ const List<String> labels = [
   'blocks',
   'is run after'
 ];
+
+//???? Hard codes for now
+int ownerId = 0;
+int taskId = 9999;
 
 class TaskForm extends StatelessWidget {
   TaskForm({super.key, required this.title});
@@ -30,10 +35,9 @@ class TaskForm extends StatelessWidget {
   Widget build(BuildContext context) {
     bool addLink = false;
     bool isDeleteLink = false;
-    String taskId = UniqueKey().hashCode.toString();
-    List<DropdownMenuItem<String>>? taskIdDropdownMenuItems =
-        context.read<Tasks>().getTaskIdDropdownMenuItems(taskId);
-    Map<String, String> linkedTasks = context.watch<Tasks>().linkedTasks;
+    List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
+        context.watch<Tasks>().getTaskIdDropdownMenuItems(taskId);
+    List<TaskLink?> linkedTasks = context.watch<Tasks>().linkedTasks;
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -127,10 +131,10 @@ class TaskForm extends StatelessWidget {
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: linkedTasks.length,
                           itemBuilder: (context, index) {
-                            String key = linkedTasks.keys.elementAt(index);
+                            int linkedTaskId = linkedTasks[index]!.linkedTaskId;
                             String taskTitle = context
                                 .watch<Tasks>()
-                                .getTaskDetails(key)
+                                .getTaskDetails(linkedTaskId)
                                 .taskTitle;
                             return ListTile(
                               isThreeLine: true,
@@ -140,7 +144,7 @@ class TaskForm extends StatelessWidget {
                               ),
                               subtitle: InkWell(
                                 child: Text(
-                                  '$key: $taskTitle',
+                                  '$linkedTaskId: $taskTitle',
                                   style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 18,
@@ -158,8 +162,8 @@ class TaskForm extends StatelessWidget {
                                         context
                                             .read<Tasks>()
                                             .clearLinkedTaskIds();
-                                        context
-                                            .push('/taskdetail?task_id=$key');
+                                        context.push(
+                                            '/taskdetail?task_id=$linkedTaskId');
                                       },
                                     ),
                                   ),
@@ -170,14 +174,13 @@ class TaskForm extends StatelessWidget {
                                       onPressed: () {
                                         isDeleteLink = true;
 
-                                        context
-                                            .read<Tasks>()
-                                            .removeLinkedTask(key, taskId);
+                                        context.read<Tasks>().removeLinkedTask(
+                                            linkedTaskId, taskId);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
                                                   content: Text(
-                                                      'Link to taskId "$key" with title "$taskTitle" removed')));
+                                                      'Link to taskId "$linkedTaskId" with title "$taskTitle" removed')));
                                         }
                                       },
                                     ),
@@ -185,7 +188,7 @@ class TaskForm extends StatelessWidget {
                                 ],
                               ),
                               title: Text(
-                                linkedTasks[key]!,
+                                linkedTasks[index]!.relation,
                                 style: const TextStyle(
                                     color: Colors.grey, fontSize: 10),
                               ),
@@ -237,12 +240,13 @@ class TaskForm extends StatelessWidget {
                               Flexible(
                                 child: DropdownButtonFormField(
                                   value: _taskIdController.text.isNotEmpty
-                                      ? _taskIdController.text
+                                      ? int.parse(_taskIdController.text)
                                       : null,
                                   isExpanded: true,
                                   items: taskIdDropdownMenuItems,
-                                  onChanged: (String? taskIdValue) {
-                                    _taskIdController.text = taskIdValue!;
+                                  onChanged: (taskIdValue) {
+                                    _taskIdController.text =
+                                        taskIdValue.toString();
                                   },
                                   // validator: (value) {
                                   //   if (value == null) {
@@ -262,46 +266,62 @@ class TaskForm extends StatelessWidget {
                                   child: IconButton(
                                     icon: const Icon(Icons.add),
                                     onPressed: () {
-                                      if (_taskIdController.text.isNotEmpty &&
+                                      int taskIdControllerInt = 0;
+                                      try {
+                                        taskIdControllerInt =
+                                            int.parse(_taskIdController.text);
+                                      } catch (exception) {
+                                        Exception(
+                                            "Convert task id controller string to int error: $exception");
+                                      }
+                                      if (taskIdControllerInt != 0 &&
                                           _labelController.text.isNotEmpty) {
-                                        if (linkedTasks[
-                                                _taskIdController.text] !=
-                                            _labelController.text) {
-                                          addLink = true;
-                                          context.read<Tasks>().addLinkedTask(
-                                              taskId,
-                                              _taskIdController.text,
-                                              _labelController.text);
+                                        if (!linkedTasks.any((element) =>
+                                            element!.relation ==
+                                            _labelController.text)) {
+                                          if (linkedTasks.any((element) =>
+                                              element!.linkedTaskId ==
+                                              taskIdControllerInt)) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(SnackBar(
+                                                    content: Text(
+                                                        'Task ID "$taskIdControllerInt" already linked to this task. Please remove and retry')));
+                                          } else {
+                                            addLink = true;
+                                            context.read<Tasks>().addLinkedTask(
+                                                taskId,
+                                                taskIdControllerInt,
+                                                _labelController.text);
+                                          }
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
                                                   content: Text(
-                                                      'Relation "${linkedTasks[_taskIdController.text]}" already present for taskId "${_taskIdController.text}" with title "${context.read<Tasks>().getTaskDetails(_taskIdController.text).taskTitle}"')));
+                                                      'Relation "${_labelController.text}" already present for another task. Please remove and retry')));
                                         }
                                       } else if (_taskIdController
                                               .text.isNotEmpty &&
                                           (_labelController.text == "" ||
                                               _labelController.text.isEmpty)) {
-                                        if (linkedTasks[
-                                                _taskIdController.text] !=
-                                            labels[0]) {
+                                        if (!linkedTasks.any((element) =>
+                                            element!.relation == labels[0])) {
                                           addLink = true;
                                           context.read<Tasks>().addLinkedTask(
                                               taskId,
-                                              _taskIdController.text,
+                                              taskIdControllerInt,
                                               labels[0]);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
                                                   content: Text(
-                                                      'Relation "${linkedTasks[_taskIdController.text]}" already present for taskId "${_taskIdController.text}" with title "${context.read<Tasks>().getTaskDetails(_taskIdController.text).taskTitle}"')));
+                                                      'Relation "${labels[0]}" already present for another task. Please remove and retry')));
                                         }
                                       }
                                       if (addLink) {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "${_taskIdController.text}" with title "${context.read<Tasks>().getTaskDetails(_taskIdController.text).taskTitle}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${context.read<Tasks>().getTaskDetails(taskIdControllerInt).taskTitle}" added')));
                                       }
                                     },
                                   ),
@@ -326,23 +346,16 @@ class TaskForm extends StatelessWidget {
                     key: const ValueKey("addTaskSubmitForm"),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        context.read<Tasks>().addTask(Task(
-                            taskId: taskId,
-                            taskTitle: _titleController.text,
-                            description: _descriptionController.text,
-                            status: _statusController.text.isNotEmpty
-                                ? _statusController.text
-                                : statuses[0],
-                            relationship: {},
-                            lastUpdate: DateTime.now()));
-                        if (linkedTasks.isNotEmpty) {
-                          linkedTasks.forEach((key, value) {
-                            context
-                                .read<Tasks>()
-                                .addLinkedTask(taskId, key, value);
-                          });
-                        }
-                        context.read<Tasks>().clearLinkedTasks();
+                        context.read<Tasks>().addTask(
+                            Task(
+                                ownerId: ownerId,
+                                taskTitle: _titleController.text,
+                                description: _descriptionController.text,
+                                status: _statusController.text.isNotEmpty
+                                    ? _statusController.text
+                                    : statuses[0],
+                                lastUpdate: DateTime.now().toString()),
+                            linkedTasks);
                         context.pop();
                       }
                     },

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:to_do_app/task.dart';
+import 'package:to_do_app/models/task.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 import 'package:to_do_app/routes.dart';
 
-const title = 'The To Do App';
+const title = 'The To-Do App';
 
 extension WithScaffold on WidgetTester {
   pumpWithScaffold(provider) async =>
