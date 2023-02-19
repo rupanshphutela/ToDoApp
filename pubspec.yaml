@@ -35,6 +35,10 @@ dependencies:
   go_router:
   sqflite:
   floor:
+  flutter_card_swiper:
+  image_picker: 
+  permission_handler: ^10.2.0
+  path_provider: ^2.0.12
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

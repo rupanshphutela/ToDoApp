@@ -65,6 +65,8 @@ class _$AppDatabase extends AppDatabase {
 
   TaskLinkDao? _taskLinkDaoInstance;
 
+  TaskImageDao? _taskImageDaoInstance;
+
   Future<sqflite.Database> open(
     String path,
     List<Migration> migrations, [
@@ -90,6 +92,8 @@ class _$AppDatabase extends AppDatabase {
             'CREATE TABLE IF NOT EXISTS `task` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `ownerId` INTEGER NOT NULL, `taskTitle` TEXT NOT NULL, `description` TEXT NOT NULL, `status` TEXT NOT NULL, `lastUpdate` TEXT NOT NULL)');
         await database.execute(
             'CREATE TABLE IF NOT EXISTS `task_link` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `taskId` INTEGER NOT NULL, `relation` TEXT NOT NULL, `linkedTaskId` INTEGER NOT NULL, `lastUpdate` TEXT NOT NULL, FOREIGN KEY (`linkedTaskId`) REFERENCES `task` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `task_image` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `taskId` INTEGER NOT NULL, `ownerId` INTEGER NOT NULL, `imagePath` TEXT NOT NULL, `uploadDate` TEXT NOT NULL, FOREIGN KEY (`taskId`) REFERENCES `task` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
 
         await callback?.onCreate?.call(database, version);
       },
@@ -105,6 +109,11 @@ class _$AppDatabase extends AppDatabase {
   @override
   TaskLinkDao get taskLinkDao {
     return _taskLinkDaoInstance ??= _$TaskLinkDao(database, changeListener);
+  }
+
+  @override
+  TaskImageDao get taskImageDao {
+    return _taskImageDaoInstance ??= _$TaskImageDao(database, changeListener);
   }
 }
 
@@ -204,19 +213,6 @@ class _$TaskDao extends TaskDao {
   }
 
   @override
-  Future<List<Task>?> getTaskDetailsByTaskId(int taskId) async {
-    return _queryAdapter.queryList('SELECT * FROM task WHERE taskId = ?1)',
-        mapper: (Map<String, Object?> row) => Task(
-            id: row['id'] as int?,
-            ownerId: row['ownerId'] as int,
-            taskTitle: row['taskTitle'] as String,
-            description: row['description'] as String,
-            status: row['status'] as String,
-            lastUpdate: row['lastUpdate'] as String),
-        arguments: [taskId]);
-  }
-
-  @override
   Future<void> updateTaskStatusAndTime(
     int taskId,
     String status,
@@ -289,5 +285,65 @@ class _$TaskLinkDao extends TaskLinkDao {
   @override
   Future<void> insertTaskLink(TaskLink tasklink) async {
     await _taskLinkInsertionAdapter.insert(tasklink, OnConflictStrategy.abort);
+  }
+}
+
+class _$TaskImageDao extends TaskImageDao {
+  _$TaskImageDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _taskImageInsertionAdapter = InsertionAdapter(
+            database,
+            'task_image',
+            (TaskImage item) => <String, Object?>{
+                  'id': item.id,
+                  'taskId': item.taskId,
+                  'ownerId': item.ownerId,
+                  'imagePath': item.imagePath,
+                  'uploadDate': item.uploadDate
+                });
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<TaskImage> _taskImageInsertionAdapter;
+
+  @override
+  Future<void> deleteLinkedImagesForDeletedTask(int taskId) async {
+    await _queryAdapter.queryNoReturn(
+        'delete from task_image where taskId = ?1',
+        arguments: [taskId]);
+  }
+
+  @override
+  Future<void> deleteTaskImage(
+    int taskImageId,
+    int taskId,
+  ) async {
+    await _queryAdapter.queryNoReturn(
+        'delete from task_image where id = ?1 and taskId = ?2',
+        arguments: [taskImageId, taskId]);
+  }
+
+  @override
+  Future<List<TaskImage>> getExistingTaskImagesByTaskId(int taskId) async {
+    return _queryAdapter.queryList('SELECT * FROM task_image WHERE taskId = ?1',
+        mapper: (Map<String, Object?> row) => TaskImage(
+            id: row['id'] as int?,
+            taskId: row['taskId'] as int,
+            ownerId: row['ownerId'] as int,
+            imagePath: row['imagePath'] as String,
+            uploadDate: row['uploadDate'] as String),
+        arguments: [taskId]);
+  }
+
+  @override
+  Future<void> insertTaskImage(TaskImage taskImage) async {
+    await _taskImageInsertionAdapter.insert(
+        taskImage, OnConflictStrategy.abort);
   }
 }

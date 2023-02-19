@@ -15,10 +15,6 @@ const List<String> labels = [
   'is run after'
 ];
 
-//???? Hard codes for now
-int ownerId = 0;
-int taskId = 9999;
-
 class TaskForm extends StatelessWidget {
   TaskForm({super.key, required this.title});
   final String title;
@@ -33,6 +29,8 @@ class TaskForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    int ownerId = context.read<Tasks>().ownerId;
+    int taskId = context.read<Tasks>().taskId;
     bool addLink = false;
     bool isDeleteLink = false;
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =

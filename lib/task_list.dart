@@ -144,8 +144,9 @@ class TaskList extends StatelessWidget {
         body: const SafeArea(
           child: Center(
             child: Text(
-              "No tasks found.\nPlease create one to see something in this space",
+              "Nothing here!!\n\nPress Add Task button\nbelow to create a task",
               style: TextStyle(color: Colors.black, fontSize: 24),
+              textAlign: TextAlign.center,
             ),
           ),
         ),

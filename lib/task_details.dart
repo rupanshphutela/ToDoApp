@@ -1,8 +1,9 @@
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:to_do_app/models/task_link.dart';
 
+import 'package:to_do_app/models/task_link.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
@@ -27,8 +28,11 @@ class TaskDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    int ownerId = context.read<Tasks>().ownerId;
+    context.read<Tasks>().updateCurrentTaskId(selectedTaskId);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
         context.watch<Tasks>().getTaskIdDropdownMenuItems(selectedTaskId);
+    context.read<Tasks>().getTaskImageStack(selectedTaskId);
 
     bool addLink = false;
     bool isDeleteLink = false;
@@ -40,6 +44,7 @@ class TaskDetails extends StatelessWidget {
     context.watch<Tasks>().getCurrentlyLinkedTasks(selectedTaskId);
     List<TaskLink?> currentlyLinkedTasks =
         context.watch<Tasks>().currentlyLinkedTasks;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       appBar: AppBar(
@@ -49,6 +54,27 @@ class TaskDetails extends StatelessWidget {
         physics: const ScrollPhysics(),
         child: Column(
           children: [
+            /** ???? Image Stack */
+            if (context.watch<Tasks>().cards.isNotEmpty)
+              SafeArea(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(0),
+                      margin: const EdgeInsets.all(0),
+                      decoration: const BoxDecoration(color: Colors.grey),
+                      height: 400,
+                      width: size.width,
+                      child: CardSwiper(
+                        scale: 0.0001,
+                        cards: context.watch<Tasks>().cards,
+                        padding: const EdgeInsets.all(24.0),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            /** ???? Image Stack */
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0),
               child: Form(
@@ -111,6 +137,50 @@ class TaskDetails extends StatelessWidget {
                         'Task ID: ${selectedTask.id}, \nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
                         style: const TextStyle(fontSize: 16),
                       ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 15),
+                      child: Text(
+                        'Add Images?',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Column(
+                      children: <Widget>[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: <Widget>[
+                            Flexible(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  context.read<Tasks>().requestCameraPermission(
+                                      ownerId, selectedTaskId);
+                                },
+                                child: const Text('Take photo'),
+                              ),
+                            ),
+                            SizedBox(
+                                width:
+                                    (MediaQuery.of(context).size.width) * 0.02),
+                            Flexible(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  context
+                                      .read<Tasks>()
+                                      .requestStoragePermission(
+                                          ownerId, selectedTaskId);
+                                },
+                                child: const Text('Upload photo'),
+                              ),
+                            )
+                          ],
+                        ),
+                      ],
                     ),
                     if (context.read<Tasks>().checkLinksEnablementEditForm)
                       const Padding(

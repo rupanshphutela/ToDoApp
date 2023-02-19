@@ -1,7 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:to_do_app/models/task.dart';
+import 'package:to_do_app/models/task_image.dart';
 import 'package:to_do_app/models/task_link.dart';
 import 'package:to_do_app/models_dao/app_database.dart';
+import 'package:to_do_app/utils/task_image_stack.dart';
 
 class Tasks with ChangeNotifier {
   final AppDatabase _database;
@@ -30,6 +37,14 @@ class Tasks with ChangeNotifier {
     _tasks = await _database.taskDao.getAllTasks();
     _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     notifyListeners();
+  }
+
+  //???? Hard codes for now
+  int ownerId = 0;
+  int taskId = 999999;
+
+  updateCurrentTaskId(int currentTaskId) {
+    taskId = currentTaskId;
   }
 
   applyFilter(String filter) {
@@ -196,6 +211,77 @@ class Tasks with ChangeNotifier {
 
   clearLinkedTaskIds() {
     linkedTaskIds.clear();
+    notifyListeners();
+  }
+
+  /// Task Image Cards on tasks
+
+  List<TaskImage> _taskImages = [];
+
+  List<TaskImageStack> _cards = [];
+
+  List<TaskImageStack> get cards {
+    return _cards.toList();
+  }
+
+  getTaskImageStack(int selectedTaskId) async {
+    _taskImages = await _database.taskImageDao
+        .getExistingTaskImagesByTaskId(selectedTaskId);
+    _cards = _taskImages
+        .map((image) => TaskImageStack(
+              taskImage: image,
+            ))
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> requestCameraPermission(
+      int selectedTaskOwnerId, int selectedTaskId) async {
+    final cameraStatus = await Permission.camera.request();
+
+    if (cameraStatus == PermissionStatus.granted) {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+      if (pickedFile == null) {
+        return;
+      }
+
+      final directory = await getApplicationDocumentsDirectory();
+      var imageName =
+          '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newImage = File('${directory.path}/$imageName');
+      await pickedFile.saveTo(newImage.path);
+      await _database.taskImageDao.insertTaskImage(TaskImage(
+          taskId: selectedTaskId,
+          ownerId: selectedTaskOwnerId,
+          imagePath: newImage.path,
+          uploadDate: DateTime.now().toString()));
+
+      getTaskImageStack(selectedTaskId);
+      notifyListeners();
+    }
+  }
+
+  Future<void> requestStoragePermission(
+      int selectedTaskOwnerId, int selectedTaskId) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) {
+      return;
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+    var imageName =
+        '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final newImage = File('${directory.path}/$imageName');
+    await pickedFile.saveTo(newImage.path);
+    await _database.taskImageDao.insertTaskImage(TaskImage(
+        taskId: selectedTaskId,
+        ownerId: selectedTaskOwnerId,
+        imagePath: newImage.path,
+        uploadDate: DateTime.now().toString()));
+
+    getTaskImageStack(selectedTaskId);
     notifyListeners();
   }
 }
