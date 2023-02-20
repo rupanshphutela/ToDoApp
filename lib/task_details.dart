@@ -177,7 +177,7 @@ class TaskDetails extends StatelessWidget {
                                 },
                                 child: const Text('Upload photo'),
                               ),
-                            )
+                            ),
                           ],
                         ),
                       ],
@@ -412,6 +412,34 @@ class TaskDetails extends StatelessWidget {
                             ],
                           ),
                         ],
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 15),
+                      child: Text(
+                        'Export Task?',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all<Color>(
+                              Colors.blue.shade400)),
+                      onPressed: () {
+                        var json = context
+                            .read<Tasks>()
+                            .serializeTaskObject(selectedTask);
+                        var qrPainterImage =
+                            context.read<Tasks>().generateQRCode(json);
+                        context.read<Tasks>().saveQrCodetoAppDirectory(
+                            selectedTaskId, qrPainterImage);
+                      },
+                      child: const Text(
+                        'Export Task',
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],

@@ -1,9 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share/share.dart';
+
 import 'package:to_do_app/models/task.dart';
 import 'package:to_do_app/models/task_image.dart';
 import 'package:to_do_app/models/task_link.dart';
@@ -246,11 +251,20 @@ class Tasks with ChangeNotifier {
         return;
       }
 
+      //save to file
       final directory = await getApplicationDocumentsDirectory();
       var imageName =
           '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final newImage = File('${directory.path}/$imageName');
       await pickedFile.saveTo(newImage.path);
+
+      // //save to gallery
+      // final extDirectory = await getExternalStorageDirectory();
+      // final galleryDirectory = '${extDirectory!.path}/DCIM';
+      // final originalFile = File(pickedFile.path);
+      // final newFile = await originalFile.copy('$galleryDirectory/$imageName');
+      // await pickedFile.saveTo(newFile.path);
+
       await _database.taskImageDao.insertTaskImage(TaskImage(
           taskId: selectedTaskId,
           ownerId: selectedTaskOwnerId,
@@ -283,5 +297,41 @@ class Tasks with ChangeNotifier {
 
     getTaskImageStack(selectedTaskId);
     notifyListeners();
+  }
+
+  String serializeTaskObject(Task task) {
+    Map<String, dynamic> toMap() {
+      return {
+        'taskTitle': task.taskTitle,
+        'description': task.description,
+        'ownerId': task.ownerId,
+        'status': task.status,
+        'lastUpdate': task.lastUpdate,
+      };
+    }
+
+    String toJson() => json.encode(toMap());
+    return toJson();
+  }
+
+  QrPainter generateQRCode(String json) {
+    final qrCode = QrPainter(
+      data: json,
+      version: QrVersions.auto,
+    );
+    // sleep(Duration(seconds: 5));
+    return qrCode;
+  }
+
+  saveQrCodetoAppDirectory(int taskId, QrPainter image) async {
+    //save to file
+    final qrCode = await image.toImageData(200);
+    final bytes = Uint8List.view(qrCode!.buffer);
+    final directory = await getApplicationDocumentsDirectory();
+    var imageName = '${ownerId}_${taskId}_QrImage.jpg';
+    final newImage = File('${directory.path}/$imageName');
+    await newImage.writeAsBytes(bytes);
+
+    Share.shareFiles([newImage.path], text: imageName);
   }
 }
