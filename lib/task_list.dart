@@ -56,10 +56,7 @@ class TaskList extends StatelessWidget {
                   ),
                   tooltip: 'Import Task',
                   onPressed: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => QrCodeScanner()),
-                    // );
+                    context.push('/qr_scanner');
                   },
                 ),
               ),
