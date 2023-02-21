@@ -42,7 +42,29 @@ class TaskList extends StatelessWidget {
 
       return Scaffold(
         appBar: AppBar(
-          title: const Text('The To-Do App - Tasks'),
+          title: Row(
+            children: [
+              Text(
+                title,
+              ),
+              SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
+              CircleAvatar(
+                backgroundColor: const Color(0xff764abc),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.qr_code,
+                  ),
+                  tooltip: 'Import Task',
+                  onPressed: () {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(builder: (context) => QrCodeScanner()),
+                    // );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
         body: SingleChildScrollView(
           physics: const ScrollPhysics(),

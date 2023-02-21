@@ -62,7 +62,6 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => Tasks(_database),
       child: MaterialApp.router(
-        title: title,
         // routeInformationProvider: myGoRouter.routeInformationProvider,
         // routeInformationParser: myGoRouter.routeInformationParser,
         // routerDelegate: myGoRouter.routerDelegate,

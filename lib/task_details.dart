@@ -48,7 +48,32 @@ class TaskDetails extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Row(
+          children: [
+            Text(
+              title,
+            ),
+            SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
+            CircleAvatar(
+              backgroundColor: const Color(0xff764abc),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.qr_code,
+                ),
+                tooltip: 'Export Task',
+                onPressed: () {
+                  var json =
+                      context.read<Tasks>().serializeTaskObject(selectedTask);
+                  var qrPainterImage =
+                      context.read<Tasks>().generateQRCode(json);
+                  context
+                      .read<Tasks>()
+                      .saveQrCodetoAppDirectory(selectedTaskId, qrPainterImage);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         physics: const ScrollPhysics(),
@@ -421,24 +446,6 @@ class TaskDetails extends StatelessWidget {
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontStyle: FontStyle.italic),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    ElevatedButton(
-                      style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all<Color>(
-                              Colors.blue.shade400)),
-                      onPressed: () {
-                        var json = context
-                            .read<Tasks>()
-                            .serializeTaskObject(selectedTask);
-                        var qrPainterImage =
-                            context.read<Tasks>().generateQRCode(json);
-                        context.read<Tasks>().saveQrCodetoAppDirectory(
-                            selectedTaskId, qrPainterImage);
-                      },
-                      child: const Text(
-                        'Export Task',
                         textAlign: TextAlign.center,
                       ),
                     ),
