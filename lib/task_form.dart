@@ -39,7 +39,12 @@ class TaskForm extends StatelessWidget {
     List<TaskLink?> linkedTasks = context.watch<Tasks>().linkedTasks;
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         physics: const ScrollPhysics(),
@@ -330,6 +335,9 @@ class TaskForm extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 50),
                     ),
                   ],
                 ),

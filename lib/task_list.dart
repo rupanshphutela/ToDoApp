@@ -43,21 +43,25 @@ class TaskList extends StatelessWidget {
       return Scaffold(
         appBar: AppBar(
           title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 title,
               ),
               SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
-              CircleAvatar(
-                backgroundColor: const Color(0xff764abc),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.qr_code,
-                  ),
-                  tooltip: 'Import Task',
-                  onPressed: () {
-                    context.push('/qr_scanner');
-                  },
+              ElevatedButton(
+                style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all(const Color(0xff764abc))),
+                onPressed: () {
+                  context.push('/qr_scanner');
+                },
+                child: Row(
+                  children: [
+                    const Icon(Icons.qr_code),
+                    SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
+                    const Text('Import Task')
+                  ],
                 ),
               ),
             ],

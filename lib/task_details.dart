@@ -49,27 +49,30 @@ class TaskDetails extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               title,
             ),
             SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
-            CircleAvatar(
-              backgroundColor: const Color(0xff764abc),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.qr_code,
-                ),
-                tooltip: 'Export Task',
-                onPressed: () {
-                  var json =
-                      context.read<Tasks>().serializeTaskObject(selectedTask);
-                  var qrPainterImage =
-                      context.read<Tasks>().generateQRCode(json);
-                  context
-                      .read<Tasks>()
-                      .saveQrCodetoAppDirectory(selectedTaskId, qrPainterImage);
-                },
+            ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all(const Color(0xff764abc))),
+              onPressed: () {
+                var json =
+                    context.read<Tasks>().serializeTaskObject(selectedTask);
+                var qrPainterImage = context.read<Tasks>().generateQRCode(json);
+                context
+                    .read<Tasks>()
+                    .saveQrCodetoAppDirectory(selectedTaskId, qrPainterImage);
+              },
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code),
+                  SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
+                  const Text('Export Task')
+                ],
               ),
             ),
           ],
@@ -440,14 +443,7 @@ class TaskDetails extends StatelessWidget {
                       ),
                     ),
                     const Padding(
-                      padding: EdgeInsets.only(top: 15),
-                      child: Text(
-                        'Export Task?',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic),
-                        textAlign: TextAlign.center,
-                      ),
+                      padding: EdgeInsets.only(bottom: 50),
                     ),
                   ],
                 ),

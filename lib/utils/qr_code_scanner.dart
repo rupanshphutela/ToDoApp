@@ -16,6 +16,12 @@ class QRScannerWidget extends StatefulWidget {
 class _QRScannerWidgetState extends State<QRScannerWidget> {
   String qrCodeData = '';
 
+  @override
+  void initState() {
+    _scanQRCode();
+    super.initState();
+  }
+
   void _onQRCodeScanned(String qrCodeScanData) {
     setState(() {
       try {
@@ -69,24 +75,8 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('QR Scanner'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                _scanQRCode();
-              },
-              child: const Text('Scan QR Code'),
-            ),
-            const SizedBox(height: 20),
-            Text(qrCodeData),
-          ],
-        ),
-      ),
-    );
+        appBar: AppBar(
+      title: const Text('QR Scanner'),
+    ));
   }
 }
