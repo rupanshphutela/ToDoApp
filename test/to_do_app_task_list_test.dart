@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:to_do_app/main.dart';
 import 'package:to_do_app/models/task.dart';
+import 'package:to_do_app/models_dao/app_database.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 import 'package:to_do_app/routes.dart';
 
@@ -17,11 +20,26 @@ extension WithScaffold on WidgetTester {
                   GoRouter(initialLocation: '/tasks', routes: routes))));
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) {
+    print('initializing database');
+  }
+  await initializeDatabase();
+  if (kDebugMode) {
+    print('loading database');
+  }
+  final AppDatabase database =
+      await $FloorAppDatabase.databaseBuilder('the_to_do_app.sqlite').build();
+
+  if (kDebugMode) {
+    print('running app');
+  }
+
   group('The widget that lists all the tasks:', () {
     testWidgets('starts out with no tasks listed', (tester) async {
       //pump change notifier provider and Material app router
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
@@ -41,7 +59,7 @@ void main() {
     testWidgets(
         'has a button that when clicked tells the navigator/router to go to the widget for creating a new task',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -65,20 +83,22 @@ void main() {
     testWidgets(
         'shows a separate widget for each task when there are tasks to list',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
       //Create 2 provider tasks with different status
       for (var index = 0; index < 2; index++) {
-        provider.addTask(Task(
-            taskId: UniqueKey().hashCode.toString(),
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        provider.addTask(
+            Task(
+              taskTitle: "Dummy Title $index",
+              description: "Dummy Description $index",
+              status: index == 0 ? "open" : "in progress",
+              lastUpdate: DateTime.now().toString(),
+              ownerId: 0,
+            ),
+            []);
       }
       //wait for tasks to create
       await tester.pumpAndSettle();
@@ -89,7 +109,7 @@ void main() {
     });
     testWidgets('shows only some of the tasks when a filter is applied.',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -100,13 +120,14 @@ void main() {
 
       //Create 2 provider tasks with different status
       for (var index = 0; index < 2; index++) {
-        provider.addTask(Task(
-            taskId: UniqueKey().hashCode.toString(),
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        provider.addTask(
+            Task(
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
       //wait for tasks to create
       await tester.pump();
@@ -126,7 +147,7 @@ void main() {
 
   group('Each task listed in the widget that lists all the tasks:', () {
     testWidgets('Indicates the name of the task', (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -134,13 +155,14 @@ void main() {
 
       //Create 2 provider tasks with different status
       for (var index = 0; index < 2; index++) {
-        provider.addTask(Task(
-            taskId: UniqueKey().hashCode.toString(),
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        provider.addTask(
+            Task(
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
 
       //wait for tasks to create
@@ -157,20 +179,21 @@ void main() {
     testWidgets(
         'has a button that when clicked tells the navigator/router to go to the widget for editing an existing task',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       //Create 2 provider tasks with different status
       for (var index = 1; index >= 0; index--) {
-        provider.addTask(Task(
-            taskId: UniqueKey().hashCode.toString(),
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        provider.addTask(
+            Task(
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
 
       //wait for tasks to create
@@ -201,7 +224,7 @@ void main() {
     testWidgets(
         'Produces a task whose title and description match the ones entered by the user, where "produces" means passes the task to a provided view model or to a parent widget via callback or navigation',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -252,7 +275,7 @@ void main() {
   group('The widget for editing an existing task', () {
     testWidgets('Fills out the title and description of the existing task',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -310,20 +333,21 @@ void main() {
 
     testWidgets('Updates the existing task instead of creating a new task',
         (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
 
       for (var index = 0; index < 1; index++) {
-        provider.addTask(Task(
-            taskId: UniqueKey().hashCode.toString(),
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        provider.addTask(
+            Task(
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
 
       //wait for tasks to create
@@ -369,22 +393,24 @@ void main() {
 
   group('Bonus Points - Links', () {
     testWidgets('Users can add links', (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
-      var taskId = "";
+      var taskId = 0;
       //create two tasks with open and in progress status
       for (var index = 0; index < 2; index++) {
-        taskId = UniqueKey().hashCode.toString();
-        provider.addTask(Task(
-            taskId: taskId,
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        taskId = UniqueKey().hashCode;
+        provider.addTask(
+            Task(
+                id: taskId,
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
 
       //wait for tasks to create
@@ -418,22 +444,24 @@ void main() {
     });
 
     testWidgets('Users can remove links', (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
-      var taskId = "";
+      var taskId = 0;
       //create two tasks with open and in progress status
       for (var index = 0; index < 2; index++) {
-        taskId = UniqueKey().hashCode.toString();
-        provider.addTask(Task(
-            taskId: taskId,
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        taskId = UniqueKey().hashCode;
+        provider.addTask(
+            Task(
+                id: taskId,
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
 
       //wait for tasks to create
@@ -478,22 +506,24 @@ void main() {
     });
 
     testWidgets('Users can use links between tasks', (tester) async {
-      final provider = Tasks();
+      final provider = Tasks(database);
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
-      var taskId = "";
+      var taskId = 0;
       //create two tasks with open and in progress status
       for (var index = 0; index < 2; index++) {
-        taskId = UniqueKey().hashCode.toString();
-        provider.addTask(Task(
-            taskId: taskId,
-            taskTitle: "Dummy Title $index",
-            description: "Dummy Description $index",
-            status: index == 0 ? "open" : "in progress",
-            lastUpdate: DateTime.now(),
-            relationship: {}));
+        taskId = UniqueKey().hashCode;
+        provider.addTask(
+            Task(
+                id: taskId,
+                taskTitle: "Dummy Title $index",
+                description: "Dummy Description $index",
+                status: index == 0 ? "open" : "in progress",
+                lastUpdate: DateTime.now().toString(),
+                ownerId: 0),
+            []);
       }
 
       //wait for tasks to create
