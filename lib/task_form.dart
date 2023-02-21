@@ -30,6 +30,7 @@ class TaskForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int ownerId = context.read<Tasks>().ownerId;
+    context.read<Tasks>().updateCurrentTaskId(999999);
     int taskId = context.read<Tasks>().taskId;
     bool addLink = false;
     bool isDeleteLink = false;
