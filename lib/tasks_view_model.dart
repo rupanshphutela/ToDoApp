@@ -318,6 +318,7 @@ class Tasks with ChangeNotifier {
     final qrCode = QrPainter(
       data: json,
       version: QrVersions.auto,
+      color: Colors.white,
     );
     // sleep(Duration(seconds: 5));
     return qrCode;
