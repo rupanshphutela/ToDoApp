@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:to_do_app/task_details.dart';
 import 'package:to_do_app/task_form.dart';
 import 'package:to_do_app/task_list.dart';
+import 'package:to_do_app/utils/qr_code_scanner.dart';
 
 final routes = [
   GoRoute(
@@ -24,4 +25,9 @@ final routes = [
         final int taskId = int.parse(state.queryParams['task_id'].toString());
         return TaskDetails(selectedTaskId: taskId, title: 'Task Details');
       }),
+  GoRoute(
+      path: '/qr_scanner',
+      builder: (context, state) {
+        return const QRScannerWidget();
+      })
 ];
