@@ -123,9 +123,9 @@ class TaskList extends StatelessWidget {
                         subtitle: Text(
                             'Task ID: ${filteredTasks[index].id}, \nLast Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
                         trailing: CircleAvatar(
-                          key: ValueKey("editTaskButton$index"),
                           backgroundColor: Colors.brown,
                           child: IconButton(
+                            key: ValueKey("editTaskButton$index"),
                             icon: const Icon(Icons.edit),
                             onPressed: () {
                               var taskId = filteredTasks[index].id;
@@ -161,8 +161,30 @@ class TaskList extends StatelessWidget {
       context.watch<Tasks>().getAllTasks();
       return Scaffold(
         appBar: AppBar(
-          centerTitle: true,
-          title: const Icon(Icons.task),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+              ),
+              SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
+              ElevatedButton(
+                style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all(const Color(0xff764abc))),
+                onPressed: () {
+                  context.push('/qr_scanner');
+                },
+                child: Row(
+                  children: [
+                    const Icon(Icons.qr_code),
+                    SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
+                    const Text('Import Task')
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         body: const SafeArea(
           child: Center(
