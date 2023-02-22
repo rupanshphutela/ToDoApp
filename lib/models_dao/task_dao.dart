@@ -7,7 +7,7 @@ abstract class TaskDao {
   Future<List<Task>> getTasksByOwnerId(int ownerId);
 
   @Query("SELECT * FROM task ")
-  Future<List<Task>> getAllTasks();
+  Future<List<Task>?> getAllTasks();
 
   @Query("delete from task where id = :taskId")
   Future<void> deleteTask(int taskId);
