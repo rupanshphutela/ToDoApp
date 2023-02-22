@@ -166,6 +166,9 @@ class TaskForm extends StatelessWidget {
                                         context
                                             .read<Tasks>()
                                             .clearLinkedTaskIds();
+                                        context
+                                            .read<Tasks>()
+                                            .getCurrentlyLinkedTasks(taskId);
                                         context.push(
                                             '/taskdetail?task_id=$linkedTaskId');
                                       },

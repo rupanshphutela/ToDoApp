@@ -128,7 +128,11 @@ class TaskList extends StatelessWidget {
                             key: ValueKey("editTaskButton$index"),
                             icon: const Icon(Icons.edit),
                             onPressed: () {
-                              var taskId = filteredTasks[index].id;
+                              var taskId = int.parse(
+                                  (filteredTasks[index].id).toString());
+                              context
+                                  .read<Tasks>()
+                                  .getCurrentlyLinkedTasks(taskId);
                               context.push('/taskdetail?task_id=$taskId');
                             },
                           ),

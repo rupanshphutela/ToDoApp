@@ -41,7 +41,6 @@ class TaskDetails extends StatelessWidget {
         taskList.where((element) => element.id == selectedTaskId);
     final selectedTask = selectedTaskList.first;
     _statusController.text = selectedTask.status;
-    context.watch<Tasks>().getCurrentlyLinkedTasks(selectedTaskId);
     List<TaskLink?> currentlyLinkedTasks =
         context.watch<Tasks>().currentlyLinkedTasks;
     final size = MediaQuery.of(context).size;
@@ -266,6 +265,10 @@ class TaskDetails extends StatelessWidget {
                                         context
                                             .read<Tasks>()
                                             .clearLinkedTaskIds();
+                                        context
+                                            .read<Tasks>()
+                                            .getCurrentlyLinkedTasks(
+                                                linkedTaskId);
                                         context.push(
                                             '/taskdetail?task_id=$linkedTaskId');
                                       },

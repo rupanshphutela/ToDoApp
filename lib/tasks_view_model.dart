@@ -135,6 +135,7 @@ class Tasks with ChangeNotifier {
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
       getAllTasks();
       linkedTaskIds.remove(linkedTaskId);
+      getCurrentlyLinkedTasks(primaryTaskId);
     } else {
       linkedTasks
           .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
