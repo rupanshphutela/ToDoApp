@@ -138,7 +138,7 @@ class TaskForm extends StatelessWidget {
                             int linkedTaskId = linkedTasks[index]!.linkedTaskId;
                             String taskTitle = context
                                 .watch<Tasks>()
-                                .getTaskDetails(linkedTaskId)
+                                .getTaskDetails(linkedTaskId)!
                                 .taskTitle;
                             return ListTile(
                               isThreeLine: true,
@@ -325,7 +325,7 @@ class TaskForm extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${context.read<Tasks>().getTaskDetails(taskIdControllerInt).taskTitle}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${context.read<Tasks>().getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
                                       }
                                     },
                                   ),

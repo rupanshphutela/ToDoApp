@@ -20,9 +20,9 @@ class Tasks with ChangeNotifier {
 
   Tasks(this._database);
   //All about tasks
-  List<Task> _tasks = [];
+  List<Task>? _tasks = [];
 
-  List<Task> get tasks => _tasks.toList();
+  List<Task> get tasks => _tasks!.toList();
   // bool created = true;
 
   void getAllTasks() async {
@@ -40,7 +40,7 @@ class Tasks with ChangeNotifier {
     // }
     // }
     _tasks = await _database.taskDao.getAllTasks();
-    _tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
+    _tasks!.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     notifyListeners();
   }
 
@@ -54,14 +54,14 @@ class Tasks with ChangeNotifier {
 
   applyFilter(String filter) {
     if (filter != 'all') {
-      return _tasks.where((x) => x.status.contains(filter)).toList();
+      return _tasks!.where((x) => x.status.contains(filter)).toList();
     } else {
-      return _tasks.toList();
+      return _tasks!.toList();
     }
   }
 
   deleteTask(int taskId) async {
-    _tasks.removeWhere((element) => element.id == taskId);
+    _tasks!.removeWhere((element) => element.id == taskId);
     await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
     await _database.taskDao.deleteTask(taskId);
     getAllTasks();
@@ -92,7 +92,7 @@ class Tasks with ChangeNotifier {
 
   bool checkIsNewTask(int taskId) {
     bool isNewTask;
-    var task = _tasks.where((element) => element.id == taskId).toList();
+    var task = _tasks!.where((element) => element.id == taskId).toList();
     if (task.isNotEmpty) {
       isNewTask = false;
     } else {
@@ -143,20 +143,24 @@ class Tasks with ChangeNotifier {
     notifyListeners();
   }
 
-  Task getTaskDetails(int taskId) {
-    return _tasks.where((element) => taskId == element.id).first;
+  Task? getTaskDetails(int? taskId) {
+    if (taskId.toString().isNotEmpty && taskId != 0) {
+      return _tasks!.where((element) => taskId == element.id).first;
+    } else {
+      return null;
+    }
   }
 
   //Dropdown Menu Task Ids to link tasks
-  List<int> allTaskIdDropdownMenuItems = [];
+  List<int?> allTaskIdDropdownMenuItems = [];
 
   List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
   List<int> linkedTaskIds = [];
 
   List<DropdownMenuItem<int>> getTaskIdDropdownMenuItems(int taskId) {
     linkedTaskIds.clear();
-    allTaskIdDropdownMenuItems = _tasks.map((e) => e.id!).toList();
-    var task = _tasks.where((element) => element.id == taskId).toList();
+    allTaskIdDropdownMenuItems = _tasks!.map((e) => e.id).toList();
+    var task = _tasks!.where((element) => element.id == taskId).toList();
     if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
       linkedTaskIds
           .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
@@ -175,7 +179,7 @@ class Tasks with ChangeNotifier {
                   .contains(taskIdMenuItem),
               value: taskIdMenuItem,
               child: Text(
-                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem).taskTitle}",
+                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem)!.taskTitle}",
                 style: TextStyle(
                   color: allTaskIdDropdownMenuItems
                           .where((element) => !linkedTaskIds.contains(element))
@@ -206,8 +210,8 @@ class Tasks with ChangeNotifier {
     notifyListeners();
   }
 
-  bool get checkLinksEnablementAddForm => _tasks.isNotEmpty;
-  bool get checkLinksEnablementEditForm => _tasks.length > 1;
+  bool get checkLinksEnablementAddForm => _tasks!.isNotEmpty;
+  bool get checkLinksEnablementEditForm => _tasks!.length > 1;
 
   clearLinkedTasks() {
     linkedTasks.clear();
@@ -326,7 +330,7 @@ class Tasks with ChangeNotifier {
 
   saveQrCodetoAppDirectory(int taskId, QrPainter image) async {
     //save to file
-    final qrCode = await image.toImageData(200);
+    final qrCode = await image.toImageData(2000);
     final bytes = Uint8List.view(qrCode!.buffer);
     final directory = await getApplicationDocumentsDirectory();
     var imageName = '${ownerId}_${taskId}_QrImage.jpg';
