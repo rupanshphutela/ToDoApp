@@ -10,8 +10,8 @@ import 'package:to_do_app/models_dao/app_database.dart';
 import 'package:to_do_app/models_dao/task_dao.dart';
 import 'package:to_do_app/models_dao/task_image_dao.dart';
 import 'package:to_do_app/models_dao/task_link_dao.dart';
-import 'package:to_do_app/tasks_view_model.dart';
-import 'package:to_do_app/routes.dart';
+import 'package:to_do_app/providers/tasks_view_model.dart';
+import 'package:to_do_app/utils/routes.dart';
 
 const title = 'The To-Do App';
 

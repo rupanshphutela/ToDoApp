@@ -10,8 +10,8 @@ import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:to_do_app/models_dao/app_database.dart';
 
-import 'package:to_do_app/routes.dart';
-import 'package:to_do_app/tasks_view_model.dart';
+import 'package:to_do_app/utils/routes.dart';
+import 'package:to_do_app/providers/tasks_view_model.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -32,6 +32,7 @@ void main() async {
   if (kDebugMode) {
     print('loading database');
   }
+
   final AppDatabase database =
       await $FloorAppDatabase.databaseBuilder('the_to_do_app.sqlite').build();
 

@@ -5,12 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:to_do_app/models/task.dart';
 import 'dart:convert';
 
-import '../tasks_view_model.dart';
+import '../providers/tasks_view_model.dart';
 
 class QRScannerWidget extends StatefulWidget {
   const QRScannerWidget({super.key});
   @override
-  _QRScannerWidgetState createState() => _QRScannerWidgetState();
+  createState() => _QRScannerWidgetState();
 }
 
 class _QRScannerWidgetState extends State<QRScannerWidget> {

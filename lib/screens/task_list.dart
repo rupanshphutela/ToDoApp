@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'package:to_do_app/routes.dart';
+import 'package:to_do_app/utils/routes.dart';
 import 'package:to_do_app/models/task.dart';
 
-import 'package:to_do_app/tasks_view_model.dart';
+import 'package:to_do_app/providers/tasks_view_model.dart';
 
 const List<String> status = <String>['all', 'open', 'in progress', 'complete'];
 final ButtonStyle style =

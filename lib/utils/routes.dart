@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
-import 'package:to_do_app/task_details.dart';
-import 'package:to_do_app/task_form.dart';
-import 'package:to_do_app/task_list.dart';
+import 'package:to_do_app/screens/task_details.dart';
+import 'package:to_do_app/screens/task_form.dart';
+import 'package:to_do_app/screens/task_list.dart';
 import 'package:to_do_app/utils/qr_code_scanner.dart';
 
 final routes = [

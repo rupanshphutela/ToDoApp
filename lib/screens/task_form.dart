@@ -1,10 +1,10 @@
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
+import 'package:to_do_app/models/task.dart';
 import 'package:to_do_app/models/task_link.dart';
-import 'package:to_do_app/tasks_view_model.dart';
+import 'package:to_do_app/providers/tasks_view_model.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
 const List<String> labels = [
@@ -15,65 +15,34 @@ const List<String> labels = [
   'is run after'
 ];
 
-class TaskDetails extends StatelessWidget {
-  TaskDetails({super.key, required this.selectedTaskId, required this.title});
-  final int selectedTaskId;
+class TaskForm extends StatelessWidget {
+  TaskForm({super.key, required this.title});
   final String title;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _statusController = TextEditingController();
 
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
   final TextEditingController _labelController = TextEditingController();
   final TextEditingController _taskIdController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     int ownerId = context.read<Tasks>().ownerId;
-    context.read<Tasks>().updateCurrentTaskId(selectedTaskId);
-    List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
-        context.watch<Tasks>().getTaskIdDropdownMenuItems(selectedTaskId);
-    context.read<Tasks>().getTaskImageStack(selectedTaskId);
-
+    context.read<Tasks>().updateCurrentTaskId(999999);
+    int taskId = context.read<Tasks>().taskId;
     bool addLink = false;
     bool isDeleteLink = false;
-    final taskList = context.watch<Tasks>().tasks;
-    final selectedTaskList =
-        taskList.where((element) => element.id == selectedTaskId);
-    final selectedTask = selectedTaskList.first;
-    _statusController.text = selectedTask.status;
-    List<TaskLink?> currentlyLinkedTasks =
-        context.watch<Tasks>().currentlyLinkedTasks;
-    final size = MediaQuery.of(context).size;
-
+    List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
+        context.watch<Tasks>().getTaskIdDropdownMenuItems(taskId);
+    List<TaskLink?> linkedTasks = context.watch<Tasks>().linkedTasks;
     return Scaffold(
       appBar: AppBar(
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-            ),
-            SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
-            ElevatedButton(
-              style: ButtonStyle(
-                  backgroundColor:
-                      MaterialStateProperty.all(const Color(0xff764abc))),
-              onPressed: () {
-                var json =
-                    context.read<Tasks>().serializeTaskObject(selectedTask);
-                var qrPainterImage = context.read<Tasks>().generateQRCode(json);
-                context
-                    .read<Tasks>()
-                    .saveQrCodetoAppDirectory(selectedTaskId, qrPainterImage);
-              },
-              child: Row(
-                children: [
-                  const Icon(Icons.qr_code),
-                  SizedBox(width: (MediaQuery.of(context).size.width) * 0.02),
-                  const Text('Export Task')
-                ],
-              ),
-            ),
+            Text(title),
           ],
         ),
       ),
@@ -81,27 +50,6 @@ class TaskDetails extends StatelessWidget {
         physics: const ScrollPhysics(),
         child: Column(
           children: [
-            /** ???? Image Stack */
-            if (context.watch<Tasks>().cards.isNotEmpty)
-              SafeArea(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(0),
-                      margin: const EdgeInsets.all(0),
-                      decoration: const BoxDecoration(color: Colors.grey),
-                      height: 400,
-                      width: size.width,
-                      child: CardSwiper(
-                        scale: 0.0001,
-                        cards: context.watch<Tasks>().cards,
-                        padding: const EdgeInsets.all(24.0),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            /** ???? Image Stack */
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0),
               child: Form(
@@ -110,23 +58,41 @@ class TaskDetails extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     TextFormField(
-                      initialValue: selectedTask.taskTitle,
-                      readOnly: true,
-                      style: const TextStyle(color: Colors.grey),
+                      key: const ValueKey("taskTitleInput"),
+                      maxLines: 1,
+                      maxLength: 20,
+                      controller: _titleController,
+                      inputFormatters: [LengthLimitingTextInputFormatter(20)],
+                      decoration: const InputDecoration(
+                        hintText: 'Enter Task Title',
+                      ),
+                      validator: (String? value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter some text';
+                        }
+                        return null;
+                      },
                     ),
                     TextFormField(
-                      initialValue: selectedTask.description,
-                      readOnly: true,
-                      maxLines: null,
-                      style: const TextStyle(color: Colors.grey),
+                      key: const ValueKey("taskDescriptionInput"),
+                      maxLines: 4,
+                      maxLength: 50,
+                      controller: _descriptionController,
+                      inputFormatters: [LengthLimitingTextInputFormatter(50)],
+                      decoration: const InputDecoration(
+                        hintText: 'Enter Task Description',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter some text';
+                        }
+                        return null;
+                      },
                     ),
                     DropdownButtonFormField(
-                      // isExpanded: true,
-                      // autofocus: true,
                       value: _statusController.text.isNotEmpty
                           ? _statusController.text
-                          : selectedTask.status,
-                      // isDense: false,
+                          : statuses[0],
                       decoration: const InputDecoration(
                         hintText: 'Please select task status',
                       ),
@@ -136,80 +102,17 @@ class TaskDetails extends StatelessWidget {
                         }
                         return null;
                       },
+                      items: statuses
+                          .map(((e) => DropdownMenuItem(
+                                value: e,
+                                child: Text(e),
+                              )))
+                          .toList(),
                       onChanged: (value) {
                         _statusController.text = value as String;
-
-                        var selectedStatus = _statusController.text.isNotEmpty
-                            ? _statusController.text
-                            : selectedTask.status.toString();
-                        if (_formKey.currentState!.validate()) {
-                          context.read<Tasks>().updateSelectedTask(
-                              selectedTaskId, selectedStatus);
-                          context.read<Tasks>().clearLinkedTasks();
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(
-                                'TaskId "${selectedTask.id}" with title "${selectedTask.taskTitle}" status updated to $selectedStatus')));
                       },
-                      items: statuses.map((statusValue) {
-                        return DropdownMenuItem(
-                          value: statusValue,
-                          child: Text(statusValue),
-                        );
-                      }).toList(),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 15),
-                      child: Text(
-                        'Task ID: ${selectedTask.id}, \nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 15),
-                      child: Text(
-                        'Add Images?',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontStyle: FontStyle.italic),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    Column(
-                      children: <Widget>[
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: <Widget>[
-                            Flexible(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  context.read<Tasks>().requestCameraPermission(
-                                      ownerId, selectedTaskId);
-                                },
-                                child: const Text('Take photo'),
-                              ),
-                            ),
-                            SizedBox(
-                                width:
-                                    (MediaQuery.of(context).size.width) * 0.02),
-                            Flexible(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  context
-                                      .read<Tasks>()
-                                      .requestStoragePermission(
-                                          ownerId, selectedTaskId);
-                                },
-                                child: const Text('Upload photo'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    if (context.read<Tasks>().checkLinksEnablementEditForm)
+                    if (context.read<Tasks>().checkLinksEnablementAddForm)
                       const Padding(
                         padding: EdgeInsets.only(top: 15),
                         child: Text(
@@ -230,12 +133,11 @@ class TaskDetails extends StatelessWidget {
                         child: ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: currentlyLinkedTasks.length,
+                          itemCount: linkedTasks.length,
                           itemBuilder: (context, index) {
-                            int linkedTaskId =
-                                currentlyLinkedTasks[index]!.linkedTaskId;
+                            int linkedTaskId = linkedTasks[index]!.linkedTaskId;
                             String taskTitle = context
-                                .read<Tasks>()
+                                .watch<Tasks>()
                                 .getTaskDetails(linkedTaskId)!
                                 .taskTitle;
                             return ListTile(
@@ -257,7 +159,6 @@ class TaskDetails extends StatelessWidget {
                                 spacing: 12,
                                 children: <Widget>[
                                   CircleAvatar(
-                                    key: ValueKey("linkedTaskLink$index"),
                                     backgroundColor: Colors.brown,
                                     child: IconButton(
                                       icon: const Icon(Icons.edit),
@@ -267,22 +168,21 @@ class TaskDetails extends StatelessWidget {
                                             .clearLinkedTaskIds();
                                         context
                                             .read<Tasks>()
-                                            .getCurrentlyLinkedTasks(
-                                                linkedTaskId);
+                                            .getCurrentlyLinkedTasks(taskId);
                                         context.push(
                                             '/taskdetail?task_id=$linkedTaskId');
                                       },
                                     ),
                                   ),
                                   CircleAvatar(
-                                    key: ValueKey('deleteLinkedTask$index'),
                                     backgroundColor: Colors.brown,
                                     child: IconButton(
                                       icon: const Icon(Icons.delete),
                                       onPressed: () {
                                         isDeleteLink = true;
+
                                         context.read<Tasks>().removeLinkedTask(
-                                            linkedTaskId, selectedTaskId);
+                                            linkedTaskId, taskId);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -295,7 +195,7 @@ class TaskDetails extends StatelessWidget {
                                 ],
                               ),
                               title: Text(
-                                currentlyLinkedTasks[index]!.relation,
+                                linkedTasks[index]!.relation,
                                 style: const TextStyle(
                                     color: Colors.grey, fontSize: 10),
                               ),
@@ -306,7 +206,7 @@ class TaskDetails extends StatelessWidget {
                     ),
                     Visibility(
                       visible:
-                          context.read<Tasks>().checkLinksEnablementEditForm,
+                          context.read<Tasks>().checkLinksEnablementAddForm,
                       child: Column(
                         children: <Widget>[
                           Row(
@@ -346,7 +246,6 @@ class TaskDetails extends StatelessWidget {
                                       0.02),
                               Flexible(
                                 child: DropdownButtonFormField(
-                                  key: const ValueKey("taskIdDropdown"),
                                   value: _taskIdController.text.isNotEmpty
                                       ? int.parse(_taskIdController.text)
                                       : null,
@@ -368,7 +267,6 @@ class TaskDetails extends StatelessWidget {
                                   width: (MediaQuery.of(context).size.width) *
                                       0.02),
                               Flexible(
-                                key: const ValueKey("addLinkedTaskButton"),
                                 flex: 0,
                                 child: CircleAvatar(
                                   backgroundColor: Colors.brown,
@@ -385,14 +283,12 @@ class TaskDetails extends StatelessWidget {
                                       }
                                       if (taskIdControllerInt != 0 &&
                                           _labelController.text.isNotEmpty) {
-                                        if (!currentlyLinkedTasks.any(
-                                            (element) =>
-                                                element!.relation ==
-                                                _labelController.text)) {
-                                          if (currentlyLinkedTasks.any(
-                                              (element) =>
-                                                  element!.linkedTaskId ==
-                                                  taskIdControllerInt)) {
+                                        if (!linkedTasks.any((element) =>
+                                            element!.relation ==
+                                            _labelController.text)) {
+                                          if (linkedTasks.any((element) =>
+                                              element!.linkedTaskId ==
+                                              taskIdControllerInt)) {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(SnackBar(
                                                     content: Text(
@@ -400,7 +296,7 @@ class TaskDetails extends StatelessWidget {
                                           } else {
                                             addLink = true;
                                             context.read<Tasks>().addLinkedTask(
-                                                selectedTaskId,
+                                                taskId,
                                                 taskIdControllerInt,
                                                 _labelController.text);
                                           }
@@ -414,13 +310,11 @@ class TaskDetails extends StatelessWidget {
                                               .text.isNotEmpty &&
                                           (_labelController.text == "" ||
                                               _labelController.text.isEmpty)) {
-                                        if (!currentlyLinkedTasks.any(
-                                            (element) =>
-                                                element!.relation ==
-                                                labels[0])) {
+                                        if (!linkedTasks.any((element) =>
+                                            element!.relation == labels[0])) {
                                           addLink = true;
                                           context.read<Tasks>().addLinkedTask(
-                                              selectedTaskId,
+                                              taskId,
                                               taskIdControllerInt,
                                               labels[0]);
                                         } else {
@@ -450,6 +344,34 @@ class TaskDetails extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(
+                  (MediaQuery.of(context).size.width).toDouble() * 0.07),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ElevatedButton(
+                    key: const ValueKey("addTaskSubmitForm"),
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        context.read<Tasks>().addTask(
+                            Task(
+                                ownerId: ownerId,
+                                taskTitle: _titleController.text,
+                                description: _descriptionController.text,
+                                status: _statusController.text.isNotEmpty
+                                    ? _statusController.text
+                                    : statuses[0],
+                                lastUpdate: DateTime.now().toString()),
+                            linkedTasks);
+                        context.pop();
+                      }
+                    },
+                    child: const Text('SAVE'),
+                  ),
+                ],
               ),
             ),
           ],
