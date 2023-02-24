@@ -13,11 +13,21 @@ import 'package:to_do_app/models_dao/app_database.dart';
 import 'package:to_do_app/routes.dart';
 import 'package:to_do_app/tasks_view_model.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kDebugMode) {
     print('initializing database');
   }
+
+  //firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  //Floor sqlite
   await initializeDatabase();
   if (kDebugMode) {
     print('loading database');
