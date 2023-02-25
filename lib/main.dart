@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 
@@ -9,9 +10,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:to_do_app/models_dao/app_database.dart';
+import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 import 'package:to_do_app/utils/routes.dart';
-import 'package:to_do_app/providers/tasks_view_model.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -19,7 +20,7 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kDebugMode) {
-    print('initializing database');
+    print('Initializing SQLite database');
   }
 
   //firebase
@@ -27,17 +28,20 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+
   //Floor sqlite
   await initializeDatabase();
   if (kDebugMode) {
-    print('loading database');
+    print('Loading SQLite database');
   }
 
   final AppDatabase database =
       await $FloorAppDatabase.databaseBuilder('the_to_do_app.sqlite').build();
 
   if (kDebugMode) {
-    print('running app');
+    print('SQLite database is up and running');
   }
   runApp(MyApp(database));
 }
@@ -70,8 +74,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final firestoreDataStore =
+        FirestoreTaskDataStore(firestore: FirebaseFirestore.instance);
+    final floorDataStore = FloorSqfliteTaskDataStore(_database);
+    final provider = TaskDataStoreProvider(
+      firestoreDataStore: firestoreDataStore,
+      floorDataStore: floorDataStore,
+    );
     return ChangeNotifierProvider(
-      create: (context) => Tasks(_database),
+      create: (context) => provider,
       child: MaterialApp.router(
         // routeInformationProvider: myGoRouter.routeInformationProvider,
         // routeInformationParser: myGoRouter.routeInformationParser,

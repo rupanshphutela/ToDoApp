@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:to_do_app/utils/routes.dart';
 import 'package:to_do_app/models/task.dart';
 
-import 'package:to_do_app/providers/tasks_view_model.dart';
+import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 const List<String> status = <String>['all', 'open', 'in progress', 'complete'];
 final ButtonStyle style =
@@ -29,9 +29,9 @@ class TaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Task> tasks = context.watch<Tasks>().tasks;
+    List<Task>? tasks = context.watch<TaskDataStoreProvider>().tasks;
 
-    if (tasks.isNotEmpty) {
+    if (tasks != null) {
       if (state == 'all' || state == 'null') {
         filteredTasks = tasks.toList();
         filterDefaultState = "all";
@@ -110,7 +110,7 @@ class TaskList extends StatelessWidget {
                         var taskId = filteredTasks[index].id;
                         filteredTasks
                             .removeWhere((element) => element.id == taskId);
-                        context.read<Tasks>().deleteTask(taskId!);
+                        // context.read<Tasks>().deleteTask(taskId!); ????
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text('Task "$taskTitle" removed')));
                       },
@@ -118,8 +118,11 @@ class TaskList extends StatelessWidget {
                         leading: const CircleAvatar(
                           backgroundColor: Color(0xff764abc),
                         ),
-                        title: Text(filteredTasks[index].taskTitle,
-                            key: ValueKey("ListTile $index Title")),
+                        title: Text(
+                          filteredTasks[index].taskTitle,
+                          key: ValueKey("ListTile $index Title"),
+                          style: const TextStyle(fontSize: 20),
+                        ),
                         subtitle: Text(
                             'Task ID: ${filteredTasks[index].id}, \nLast Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
                         trailing: CircleAvatar(
@@ -130,9 +133,9 @@ class TaskList extends StatelessWidget {
                             onPressed: () {
                               var taskId = int.parse(
                                   (filteredTasks[index].id).toString());
-                              context
-                                  .read<Tasks>()
-                                  .getCurrentlyLinkedTasks(taskId);
+                              // context
+                              //     .read<Tasks>()
+                              //     .getCurrentlyLinkedTasks(taskId); ????
                               context.push('/taskdetail?task_id=$taskId');
                             },
                           ),
@@ -162,7 +165,9 @@ class TaskList extends StatelessWidget {
         ),
       );
     } else {
-      context.watch<Tasks>().getAllTasks();
+      context
+          .watch<TaskDataStoreProvider>()
+          .fetchForUser(0); //???? dont you hardcode user
       return Scaffold(
         appBar: AppBar(
           title: Row(
