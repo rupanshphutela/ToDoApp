@@ -252,19 +252,6 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   // bool created = true;
   @override
   Future<List<Task>> getTasksForUser(int ownerId) async {
-    // if (created == true) {
-    //   created = false;
-    //   for (var index = 0; index < 4; index++) {
-    //     await addTask(
-    //         Task(
-    //             ownerId: 0,
-    //             taskTitle: "Dummy Title $index",
-    //             description: "Dummy Description $index",
-    //             status: index == 0 ? "open" : "in progress",
-    //             lastUpdate: DateTime.now().toString()),
-    //         []);
-    //   }
-    // }
     final tasks = await _database.taskDao.getTasksByOwnerId(ownerId);
     tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     if (tasks.isNotEmpty) personalTasks = tasks;
@@ -387,6 +374,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
           relation: relation,
           linkedTaskId: linkedTaskId,
           lastUpdate: DateTime.now().toString()));
+      fetchAllTasksForUser(ownerId);
     }
     notifyListeners();
   }
@@ -408,6 +396,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
       linkedTasks
           .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
       linkedTaskIds.remove(linkedTaskId);
+      fetchAllTasksForUser(ownerId);
     }
     notifyListeners();
   }

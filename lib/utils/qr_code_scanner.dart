@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:to_do_app/models/task.dart';
 import 'dart:convert';
 
-import '../providers/tasks_view_model.dart';
+import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 class QRScannerWidget extends StatefulWidget {
   const QRScannerWidget({super.key});
@@ -37,14 +37,17 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
               data['ownerId'] != "" &&
               data['ownerId'] is int &&
               data['lastUpdate'] != "") {
-            context.read<Tasks>().addTask(
+            var provider =
+                Provider.of<TaskDataStoreProvider>(context, listen: false);
+            provider.personalDataStore.addTask(
                 Task(
                     ownerId: data['ownerId'],
                     taskTitle: data['taskTitle'],
                     description: data['description'],
                     status: data['status'],
                     lastUpdate: data['lastUpdate']),
-                []);
+                [],
+                provider.fetchAllTasksForUser);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(
                     'TaskId with title "${data['taskTitle']}" successfully inserted via QR Code scan')));
