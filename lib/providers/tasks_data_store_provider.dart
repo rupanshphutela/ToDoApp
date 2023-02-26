@@ -30,7 +30,7 @@ class TaskDataStoreProvider with ChangeNotifier {
   })  : personalDataStore = floorDataStore,
         sharedDataStore = firestoreDataStore;
 
-  void fetchForUser(int ownerId) async {
+  void fetchAllTasksForUser(int ownerId) async {
     //no await here to kickoff simultaneously
     final futurePersonalTasks = personalDataStore.getTasksForUser(ownerId);
     final futureSharedTasks = sharedDataStore.getTasksForUser(ownerId);
@@ -41,12 +41,27 @@ class TaskDataStoreProvider with ChangeNotifier {
     tasks = combined;
     notifyListeners();
   }
+
+  bool get checkLinksEnablementAddForm => tasks!.isNotEmpty;
+  bool get checkLinksEnablementEditForm => tasks!.length > 1;
 }
 
 //abstract no resp
-abstract class TaskDataStore {
+abstract class TaskDataStore extends ChangeNotifier {
+  List<TaskLink?> get linkedTasks => linkedTasks;
+
 //use case – get all of inventory items belonging to a particular user
   Future<List<Task>> getTasksForUser(int ownerId);
+
+  List<DropdownMenuItem<int>>? getTaskIdDropdownMenuItems(int taskId);
+
+  getTaskDetails(int taskId);
+
+  void addTask(Task task, List<TaskLink?> linkedTasks);
+
+  void removeLinkedTask(int linkedTaskId, int primaryTaskId);
+
+  void addLinkedTask(int primaryTaskId, int linkedTaskId, String relation);
 }
 
 //single resp : translate use cases t firestore interactions
@@ -70,6 +85,35 @@ class FirestoreTaskDataStore extends TaskDataStore {
 //idea is to make db readonly
 //firebasefirestore.instance is a singleton object and for sqlite it’s a local object
   }
+
+  @override
+  List<DropdownMenuItem<int>>? getTaskIdDropdownMenuItems(int taskId) {
+    return null;
+  }
+
+  @override
+  getTaskDetails(int taskId) {
+    // TODO: implement getTaskDetails
+    throw UnimplementedError();
+  }
+
+  @override
+  void addTask(Task task, List<TaskLink?> linkedTasks) {
+    // TODO: implement addTask
+  }
+
+  @override
+  List<TaskLink?> linkedTasks = [];
+
+  @override
+  void removeLinkedTask(int linkedTaskId, int primaryTaskId) {
+    // TODO: implement removeLinkedTask
+  }
+
+  @override
+  void addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) {
+    // TODO: implement addLinkedTask
+  }
 }
 
 //single responsibility: Translate use cases to SQflite as a local datastore
@@ -79,7 +123,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   FloorSqfliteTaskDataStore(AppDatabase database)
       : _database = database; // this is dependency injection
   //All about tasks
-  // List<Task>? _tasks = [];
+  List<Task>? personalTasks;
 
   // List<Task> get tasks => _tasks!.toList();
   // bool created = true;
@@ -100,9 +144,11 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
     // }
     final tasks = await _database.taskDao.getTasksByOwnerId(ownerId);
     tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
+    if (tasks.isNotEmpty) personalTasks = tasks;
     return tasks;
   }
 
+  @override
   addTask(Task task, List<TaskLink?> linkedTasks) async {
     await _database.taskDao.insertTask(task);
     if (linkedTasks.isNotEmpty) {
@@ -116,9 +162,134 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
             lastUpdate: DateTime.now().toString()));
       }
     }
-    // getAllTasks();
-    // clearLinkedTasks();
-    //notifyListeners();
+    getTasksForUser(task.ownerId);
+    clearLinkedTasks();
+    notifyListeners();
+  }
+
+  //Dropdown Menu Task Ids to link tasks
+  List<int?> allTaskIdDropdownMenuItems = [];
+
+  List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
+  List<int> linkedTaskIds = [];
+  List<TaskLink?> currentlyLinkedTasks = [];
+  @override
+  List<TaskLink?> linkedTasks = [];
+
+  @override
+  List<DropdownMenuItem<int>> getTaskIdDropdownMenuItems(int taskId) {
+    linkedTaskIds.clear();
+    allTaskIdDropdownMenuItems = personalTasks!.map((e) => e.id).toList();
+    var task = personalTasks!.where((element) => element.id == taskId).toList();
+    if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
+      linkedTaskIds
+          .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
+    } else if (task.isEmpty && linkedTasks.isNotEmpty) {
+      for (var linkedTask in linkedTasks) {
+        linkedTaskIds.add(linkedTask!.linkedTaskId);
+      }
+    }
+
+    allTaskIdDropdownMenuItems.remove(taskId);
+    taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
+        .map((taskIdMenuItem) => DropdownMenuItem(
+              enabled: allTaskIdDropdownMenuItems
+                  .where((element) => !linkedTaskIds.contains(element))
+                  .toList()
+                  .contains(taskIdMenuItem),
+              value: taskIdMenuItem,
+              child: Text(
+                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem)!.taskTitle}",
+                style: TextStyle(
+                  color: allTaskIdDropdownMenuItems
+                          .where((element) => !linkedTaskIds.contains(element))
+                          .toList()
+                          .contains(taskIdMenuItem)
+                      ? Colors.blue
+                      : Colors.grey,
+                ),
+              ),
+            ))
+        .toList();
+    return taskIdDropdownMenuItems;
+  }
+
+  @override
+  Task? getTaskDetails(int? taskId) {
+    if (taskId.toString().isNotEmpty && taskId != 0) {
+      return personalTasks!.where((element) => taskId == element.id).first;
+    } else {
+      return null;
+    }
+  }
+
+  //all about linked tasks in task_form.dart
+  @override
+  addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) async {
+    bool isNewTask = checkIsNewTask(primaryTaskId);
+    if (!isNewTask) {
+      //create linked task with new time
+      await _database.taskLinkDao.insertTaskLink(TaskLink(
+          taskId: primaryTaskId,
+          relation: relation,
+          linkedTaskId: linkedTaskId,
+          lastUpdate: DateTime.now().toString()));
+      //Update main task with current time
+      await _database.taskDao
+          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
+      getCurrentlyLinkedTasks(primaryTaskId);
+      // getTasksForUser(); ???? why do I need it?
+    } else {
+      linkedTasks.add(TaskLink(
+          taskId: 9999,
+          relation: relation,
+          linkedTaskId: linkedTaskId,
+          lastUpdate: DateTime.now().toString()));
+    }
+    notifyListeners();
+  }
+
+  @override
+  removeLinkedTask(int linkedTaskId, int primaryTaskId) async {
+    bool isNewTask = checkIsNewTask(primaryTaskId);
+    if (!isNewTask) {
+      //delete linked task from linked tasks table
+      await _database.taskLinkDao.deleteLinkedTask(linkedTaskId, primaryTaskId);
+      //update date/time in main task table
+      await _database.taskDao
+          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
+      // getAllTasks(); ???? why do I need this?
+      linkedTaskIds.remove(linkedTaskId);
+      getCurrentlyLinkedTasks(primaryTaskId);
+    } else {
+      linkedTasks
+          .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
+      linkedTaskIds.remove(linkedTaskId);
+    }
+    notifyListeners();
+  }
+
+  clearLinkedTasks() {
+    linkedTasks.clear();
+    notifyListeners();
+  }
+
+  bool checkIsNewTask(int taskId) {
+    bool isNewTask;
+    var task = personalTasks!.where((element) => element.id == taskId).toList();
+    if (task.isNotEmpty) {
+      isNewTask = false;
+    } else {
+      isNewTask = true;
+    }
+    return isNewTask;
+  }
+
+  void getCurrentlyLinkedTasks(int taskId) async {
+    currentlyLinkedTasks =
+        await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
+    currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
+    notifyListeners();
   }
 }
 /*

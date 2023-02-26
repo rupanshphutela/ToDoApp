@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:to_do_app/models/task.dart';
 import 'package:to_do_app/models/task_link.dart';
-import 'package:to_do_app/providers/tasks_view_model.dart';
+import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
 const List<String> labels = [
@@ -29,14 +29,15 @@ class TaskForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int ownerId = context.read<Tasks>().ownerId;
-    context.read<Tasks>().updateCurrentTaskId(999999);
-    int taskId = context.read<Tasks>().taskId;
+    int ownerId = 0; //???? dont you hardcode ownerId
+    // context.read<Tasks>().updateCurrentTaskId(999999);
+    int taskId = 0; //???? dont you hardcode taskId
     bool addLink = false;
     bool isDeleteLink = false;
+    final provider = Provider.of<TaskDataStoreProvider>(context);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
-        context.watch<Tasks>().getTaskIdDropdownMenuItems(taskId);
-    List<TaskLink?> linkedTasks = context.watch<Tasks>().linkedTasks;
+        provider.personalDataStore.getTaskIdDropdownMenuItems(taskId);
+    List<TaskLink?> linkedTasks = provider.personalDataStore.linkedTasks;
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -112,7 +113,9 @@ class TaskForm extends StatelessWidget {
                         _statusController.text = value as String;
                       },
                     ),
-                    if (context.read<Tasks>().checkLinksEnablementAddForm)
+                    if (context
+                        .read<TaskDataStoreProvider>()
+                        .checkLinksEnablementAddForm)
                       const Padding(
                         padding: EdgeInsets.only(top: 15),
                         child: Text(
@@ -136,8 +139,7 @@ class TaskForm extends StatelessWidget {
                           itemCount: linkedTasks.length,
                           itemBuilder: (context, index) {
                             int linkedTaskId = linkedTasks[index]!.linkedTaskId;
-                            String taskTitle = context
-                                .watch<Tasks>()
+                            String taskTitle = provider.personalDataStore
                                 .getTaskDetails(linkedTaskId)!
                                 .taskTitle;
                             return ListTile(
@@ -163,12 +165,12 @@ class TaskForm extends StatelessWidget {
                                     child: IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () {
-                                        context
-                                            .read<Tasks>()
-                                            .clearLinkedTaskIds();
-                                        context
-                                            .read<Tasks>()
-                                            .getCurrentlyLinkedTasks(taskId);
+                                        // context
+                                        //     .read<Tasks>()
+                                        //     .clearLinkedTaskIds(); ???? move this to tasks edit page
+                                        // context
+                                        //     .read<Tasks>()
+                                        //     .getCurrentlyLinkedTasks(taskId); ???? move this to tasks edit page
                                         context.push(
                                             '/taskdetail?task_id=$linkedTaskId');
                                       },
@@ -181,8 +183,9 @@ class TaskForm extends StatelessWidget {
                                       onPressed: () {
                                         isDeleteLink = true;
 
-                                        context.read<Tasks>().removeLinkedTask(
-                                            linkedTaskId, taskId);
+                                        provider.personalDataStore
+                                            .removeLinkedTask(
+                                                linkedTaskId, taskId);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -205,8 +208,9 @@ class TaskForm extends StatelessWidget {
                       ),
                     ),
                     Visibility(
-                      visible:
-                          context.read<Tasks>().checkLinksEnablementAddForm,
+                      visible: context
+                          .read<TaskDataStoreProvider>()
+                          .checkLinksEnablementAddForm,
                       child: Column(
                         children: <Widget>[
                           Row(
@@ -295,10 +299,11 @@ class TaskForm extends StatelessWidget {
                                                         'Task ID "$taskIdControllerInt" already linked to this task. Please remove and retry')));
                                           } else {
                                             addLink = true;
-                                            context.read<Tasks>().addLinkedTask(
-                                                taskId,
-                                                taskIdControllerInt,
-                                                _labelController.text);
+                                            provider.personalDataStore
+                                                .addLinkedTask(
+                                                    taskId,
+                                                    taskIdControllerInt,
+                                                    _labelController.text);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -313,10 +318,11 @@ class TaskForm extends StatelessWidget {
                                         if (!linkedTasks.any((element) =>
                                             element!.relation == labels[0])) {
                                           addLink = true;
-                                          context.read<Tasks>().addLinkedTask(
-                                              taskId,
-                                              taskIdControllerInt,
-                                              labels[0]);
+                                          provider.personalDataStore
+                                              .addLinkedTask(
+                                                  taskId,
+                                                  taskIdControllerInt,
+                                                  labels[0]);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -328,7 +334,7 @@ class TaskForm extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${context.read<Tasks>().getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.personalDataStore.getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
                                       }
                                     },
                                   ),
@@ -356,7 +362,7 @@ class TaskForm extends StatelessWidget {
                     key: const ValueKey("addTaskSubmitForm"),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        context.read<Tasks>().addTask(
+                        provider.personalDataStore.addTask(
                             Task(
                                 ownerId: ownerId,
                                 taskTitle: _titleController.text,

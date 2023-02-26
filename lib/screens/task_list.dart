@@ -135,7 +135,7 @@ class TaskList extends StatelessWidget {
                                   (filteredTasks[index].id).toString());
                               // context
                               //     .read<Tasks>()
-                              //     .getCurrentlyLinkedTasks(taskId); ????
+                              //     .getCurrentlyLinkedTasks(taskId); ???? move this to tasks edit page
                               context.push('/taskdetail?task_id=$taskId');
                             },
                           ),
@@ -167,7 +167,7 @@ class TaskList extends StatelessWidget {
     } else {
       context
           .watch<TaskDataStoreProvider>()
-          .fetchForUser(0); //???? dont you hardcode user
+          .fetchAllTasksForUser(0); //???? dont you hardcode user
       return Scaffold(
         appBar: AppBar(
           title: Row(
