@@ -135,9 +135,8 @@ class TaskList extends StatelessWidget {
                             onPressed: () {
                               var taskId = int.parse(
                                   (filteredTasks[index].id).toString());
-                              // context
-                              //     .read<Tasks>()
-                              //     .getCurrentlyLinkedTasks(taskId); ???? move this to tasks edit page
+                              provider.personalDataStore.getCurrentlyLinkedTasks(
+                                  taskId); // ???? move this to tasks edit page
                               context.push('/taskdetail?task_id=$taskId');
                             },
                           ),

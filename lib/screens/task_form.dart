@@ -164,12 +164,11 @@ class TaskForm extends StatelessWidget {
                                     child: IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () {
-                                        // context
-                                        //     .read<Tasks>()
-                                        //     .clearLinkedTaskIds(); ???? move this to tasks edit page
-                                        // context
-                                        //     .read<Tasks>()
-                                        //     .getCurrentlyLinkedTasks(taskId); ???? move this to tasks edit page
+                                        provider.personalDataStore
+                                            .clearLinkedTaskIds(); // ???? move this to tasks edit page
+                                        provider.personalDataStore
+                                            .getCurrentlyLinkedTasks(
+                                                linkedTaskId); // ???? move this to tasks edit page
                                         context.push(
                                             '/taskdetail?task_id=$linkedTaskId');
                                       },
