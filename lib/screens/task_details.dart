@@ -32,7 +32,8 @@ class TaskDetails extends StatelessWidget {
     final provider = Provider.of<TaskDataStoreProvider>(context);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
         provider.personalDataStore.getTaskIdDropdownMenuItems(selectedTaskId);
-    provider.personalDataStore.getTaskImageStack(selectedTaskId);
+    provider.personalDataStore.getTaskImageStack(
+        selectedTaskId, ownerId, provider.fetchAllTasksForUser);
 
     bool addLink = false;
     bool isDeleteLink = false;
@@ -142,7 +143,10 @@ class TaskDetails extends StatelessWidget {
                             : selectedTask.status.toString();
                         if (_formKey.currentState!.validate()) {
                           provider.personalDataStore.updateSelectedTask(
-                              ownerId, selectedTaskId, selectedStatus);
+                              ownerId,
+                              selectedTaskId,
+                              selectedStatus,
+                              provider.fetchAllTasksForUser);
                         }
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(
@@ -183,8 +187,10 @@ class TaskDetails extends StatelessWidget {
                               child: ElevatedButton(
                                 onPressed: () {
                                   provider.personalDataStore
-                                      .requestCameraPermission(
-                                          ownerId, selectedTaskId);
+                                      .uploadPictureViaCamera(
+                                          ownerId,
+                                          selectedTaskId,
+                                          provider.fetchAllTasksForUser);
                                 },
                                 child: const Text('Take photo'),
                               ),
@@ -196,8 +202,10 @@ class TaskDetails extends StatelessWidget {
                               child: ElevatedButton(
                                 onPressed: () {
                                   provider.personalDataStore
-                                      .requestStoragePermission(
-                                          ownerId, selectedTaskId);
+                                      .uploadPictureViaStorage(
+                                          ownerId,
+                                          selectedTaskId,
+                                          provider.fetchAllTasksForUser);
                                 },
                                 child: const Text('Upload photo'),
                               ),
@@ -278,8 +286,11 @@ class TaskDetails extends StatelessWidget {
                                       onPressed: () {
                                         isDeleteLink = true;
                                         provider.personalDataStore
-                                            .removeLinkedTask(ownerId,
-                                                linkedTaskId, selectedTaskId);
+                                            .removeLinkedTask(
+                                                ownerId,
+                                                linkedTaskId,
+                                                selectedTaskId,
+                                                provider.fetchAllTasksForUser);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -402,7 +413,9 @@ class TaskDetails extends StatelessWidget {
                                                     ownerId,
                                                     selectedTaskId,
                                                     taskIdControllerInt,
-                                                    _labelController.text);
+                                                    _labelController.text,
+                                                    provider
+                                                        .fetchAllTasksForUser);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -424,7 +437,9 @@ class TaskDetails extends StatelessWidget {
                                                   ownerId,
                                                   selectedTaskId,
                                                   taskIdControllerInt,
-                                                  labels[0]);
+                                                  labels[0],
+                                                  provider
+                                                      .fetchAllTasksForUser);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(

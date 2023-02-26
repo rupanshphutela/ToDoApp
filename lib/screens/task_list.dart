@@ -112,7 +112,8 @@ class TaskList extends StatelessWidget {
                         var taskId = filteredTasks[index].id;
                         filteredTasks
                             .removeWhere((element) => element.id == taskId);
-                        provider.personalDataStore.deleteTask(ownerId, taskId!);
+                        provider.personalDataStore.deleteTask(
+                            ownerId, taskId!, provider.fetchAllTasksForUser);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text('Task "$taskTitle" removed')));
                       },

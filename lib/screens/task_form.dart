@@ -183,7 +183,10 @@ class TaskForm extends StatelessWidget {
 
                                         provider.personalDataStore
                                             .removeLinkedTask(
-                                                ownerId, linkedTaskId, taskId);
+                                                ownerId,
+                                                linkedTaskId,
+                                                taskId,
+                                                provider.fetchAllTasksForUser);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -302,7 +305,9 @@ class TaskForm extends StatelessWidget {
                                                     ownerId,
                                                     taskId,
                                                     taskIdControllerInt,
-                                                    _labelController.text);
+                                                    _labelController.text,
+                                                    provider
+                                                        .fetchAllTasksForUser);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -322,7 +327,9 @@ class TaskForm extends StatelessWidget {
                                                   ownerId,
                                                   taskId,
                                                   taskIdControllerInt,
-                                                  labels[0]);
+                                                  labels[0],
+                                                  provider
+                                                      .fetchAllTasksForUser);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -371,7 +378,8 @@ class TaskForm extends StatelessWidget {
                                     ? _statusController.text
                                     : statuses[0],
                                 lastUpdate: DateTime.now().toString()),
-                            linkedTasks);
+                            linkedTasks,
+                            provider.fetchAllTasksForUser);
                         context.pop();
                       }
                     },

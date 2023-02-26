@@ -74,14 +74,19 @@ abstract class TaskDataStore {
 
   getTaskDetails(int taskId);
 
-  void addTask(Task task, List<TaskLink?> linkedTasks);
+  void addTask(
+      Task task, List<TaskLink?> linkedTasks, Function fetchAllTasksForUser);
 
-  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId);
+  void deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser);
 
-  void addLinkedTask(
-      int ownerId, int primaryTaskId, int linkedTaskId, String relation);
+  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
+      Function fetchAllTasksForUser);
 
-  void getTaskImageStack(int selectedTaskId);
+  void addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
+      String relation, Function fetchAllTasksForUser);
+
+  void getTaskImageStack(
+      int selectedTaskId, int ownerId, Function fetchAllTasksForUser);
 
   String serializeTaskObject(Task task);
 
@@ -89,22 +94,20 @@ abstract class TaskDataStore {
 
   saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image);
 
-  void updateSelectedTask(
-      int ownerId, int selectedTaskId, String selectedStatus);
+  void updateSelectedTask(int ownerId, int selectedTaskId,
+      String selectedStatus, Function fetchAllTasksForUser);
 
   void clearLinkedTasks();
 
-  Future<void> requestCameraPermission(
-      int selectedTaskOwnerId, int selectedTaskId);
+  Future<void> uploadPictureViaCamera(int selectedTaskOwnerId,
+      int selectedTaskId, Function fetchAllTasksForUser);
 
-  Future<void> requestStoragePermission(
-      int selectedTaskOwnerId, int selectedTaskId);
+  Future<void> uploadPictureViaStorage(int selectedTaskOwnerId,
+      int selectedTaskId, Function fetchAllTasksForUser);
 
   void clearLinkedTaskIds();
 
   void getCurrentlyLinkedTasks(int taskId);
-
-  deleteTask(int ownerId, int taskId);
 }
 
 //single resp : translate use cases t firestore interactions
@@ -141,7 +144,7 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  void addTask(Task task, List<TaskLink?> linkedTasks) {
+  void addTask(Task task, List<TaskLink?> linkedTasks, fetchAllTasksForUser) {
     // TODO: implement addTask
   }
 
@@ -152,18 +155,20 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   List<TaskLink?> currentlyLinkedTasks = [];
 
   @override
-  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) {
+  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
+      Function fetchAllTasksForUser) {
     // TODO: implement removeLinkedTask
   }
 
   @override
-  void addLinkedTask(
-      int ownerId, int primaryTaskId, int linkedTaskId, String relation) {
+  void addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
+      String relation, Function fetchAllTasksForUser) {
     // TODO: implement addLinkedTask
   }
 
   @override
-  void getTaskImageStack(int selectedTaskId) {
+  void getTaskImageStack(
+      int selectedTaskId, int ownerId, Function fetchAllTasksForUser) {
     // TODO: implement getTaskImageStack
   }
 
@@ -193,8 +198,8 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  void updateSelectedTask(
-      int ownerId, int selectedTaskId, String selectedStatus) {
+  void updateSelectedTask(int ownerId, int selectedTaskId,
+      String selectedStatus, Function fetchAllTasksForUser) {
     // TODO: implement updateSelectedTask
   }
 
@@ -204,16 +209,16 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  Future<void> requestCameraPermission(
-      int selectedTaskOwnerId, int selectedTaskId) {
-    // TODO: implement requestCameraPermission
+  Future<void> uploadPictureViaCamera(int selectedTaskOwnerId,
+      int selectedTaskId, Function fetchAllTasksForUser) {
+    // TODO: implement uploadPictureViaCamera
     throw UnimplementedError();
   }
 
   @override
-  Future<void> requestStoragePermission(
-      int selectedTaskOwnerId, int selectedTaskId) {
-    // TODO: implement requestStoragePermission
+  Future<void> uploadPictureViaStorage(int selectedTaskOwnerId,
+      int selectedTaskId, Function fetchAllTasksForUser) {
+    // TODO: implement uploadPictureViaStorage
     throw UnimplementedError();
   }
 
@@ -228,7 +233,7 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  deleteTask(int ownerId, int taskId) {
+  deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser) {
     // TODO: implement deleteTask
     throw UnimplementedError();
   }
@@ -267,7 +272,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  addTask(Task task, List<TaskLink?> linkedTasks) async {
+  addTask(Task task, List<TaskLink?> linkedTasks,
+      Function fetchAllTasksForUser) async {
     await _database.taskDao.insertTask(task);
     if (linkedTasks.isNotEmpty) {
       int? latestTaskId =
@@ -280,18 +286,18 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
             lastUpdate: DateTime.now().toString()));
       }
     }
-    getTasksForUser(task.ownerId);
+    fetchAllTasksForUser(task.ownerId);
     clearLinkedTasks();
     notifyListeners();
   }
 
   @override
-  deleteTask(int ownerId, int taskId) async {
+  deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser) async {
     personalTasks!.removeWhere((element) => element.id == taskId);
     await _database.taskImageDao.deleteLinkedImagesForDeletedTask(taskId);
     await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
     await _database.taskDao.deleteTask(taskId);
-    getTasksForUser(ownerId);
+    fetchAllTasksForUser(ownerId);
     getCurrentlyLinkedTasks(taskId);
     notifyListeners();
   }
@@ -360,8 +366,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
 
   //all about linked tasks in task_form.dart
   @override
-  addLinkedTask(
-      int ownerId, int primaryTaskId, int linkedTaskId, String relation) async {
+  addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
+      String relation, Function fetchAllTasksForUser) async {
     bool isNewTask = checkIsNewTask(primaryTaskId);
     if (!isNewTask) {
       //create linked task with new time
@@ -374,7 +380,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
       await _database.taskDao
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
       getCurrentlyLinkedTasks(primaryTaskId);
-      getTasksForUser(ownerId);
+      fetchAllTasksForUser(ownerId);
     } else {
       linkedTasks.add(TaskLink(
           taskId: 9999,
@@ -386,7 +392,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) async {
+  removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
+      Function fetchAllTasksForUser) async {
     bool isNewTask = checkIsNewTask(primaryTaskId);
     if (!isNewTask) {
       //delete linked task from linked tasks table
@@ -394,7 +401,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
       //update date/time in main task table
       await _database.taskDao
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      getTasksForUser(ownerId);
+      fetchAllTasksForUser(ownerId);
       linkedTaskIds.remove(linkedTaskId);
       getCurrentlyLinkedTasks(primaryTaskId);
     } else {
@@ -437,11 +444,11 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  updateSelectedTask(
-      int ownerId, int selectedTaskId, String selectedStatus) async {
+  updateSelectedTask(int ownerId, int selectedTaskId, String selectedStatus,
+      Function fetchAllTasksForUser) async {
     await _database.taskDao.updateTaskStatusAndTime(
         selectedTaskId, selectedStatus, DateTime.now().toString());
-    getTasksForUser(ownerId);
+    fetchAllTasksForUser(ownerId);
     clearLinkedTasks();
     notifyListeners();
   }
@@ -456,7 +463,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   List<TaskImageStack> get cards => _cards.toList();
 
   @override
-  getTaskImageStack(int selectedTaskId) async {
+  getTaskImageStack(
+      int selectedTaskId, int ownerId, Function fetchAllTasksForUser) async {
     _taskImages = await _database.taskImageDao
         .getExistingTaskImagesByTaskId(selectedTaskId);
     _cards = _taskImages
@@ -464,12 +472,13 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
               taskImage: image,
             ))
         .toList();
+    fetchAllTasksForUser(ownerId);
     notifyListeners();
   }
 
   @override
-  Future<void> requestCameraPermission(
-      int selectedTaskOwnerId, int selectedTaskId) async {
+  Future<void> uploadPictureViaCamera(int selectedTaskOwnerId,
+      int selectedTaskId, Function fetchAllTasksForUser) async {
     final cameraStatus = await Permission.camera.request();
 
     if (cameraStatus == PermissionStatus.granted) {
@@ -498,15 +507,18 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
           ownerId: selectedTaskOwnerId,
           imagePath: newImage.path,
           uploadDate: DateTime.now().toString()));
+      await _database.taskDao
+          .updateTaskWithCurrentTime(selectedTaskId, DateTime.now().toString());
 
-      getTaskImageStack(selectedTaskId);
+      getTaskImageStack(
+          selectedTaskId, selectedTaskOwnerId, fetchAllTasksForUser);
       notifyListeners();
     }
   }
 
   @override
-  Future<void> requestStoragePermission(
-      int selectedTaskOwnerId, int selectedTaskId) async {
+  Future<void> uploadPictureViaStorage(int selectedTaskOwnerId,
+      int selectedTaskId, Function fetchAllTasksForUser) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile == null) {
@@ -523,8 +535,11 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
         ownerId: selectedTaskOwnerId,
         imagePath: newImage.path,
         uploadDate: DateTime.now().toString()));
+    await _database.taskDao
+        .updateTaskWithCurrentTime(selectedTaskId, DateTime.now().toString());
 
-    getTaskImageStack(selectedTaskId);
+    getTaskImageStack(
+        selectedTaskId, selectedTaskOwnerId, fetchAllTasksForUser);
     notifyListeners();
   }
 
