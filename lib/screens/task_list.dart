@@ -29,9 +29,11 @@ class TaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Task>? tasks = context.watch<TaskDataStoreProvider>().tasks;
+    int ownerId = 0; //???? dont you hardcode ownerId
+    final provider = Provider.of<TaskDataStoreProvider>(context);
+    List<Task>? tasks = provider.tasks;
 
-    if (tasks != null) {
+    if (tasks != null && tasks.isNotEmpty) {
       if (state == 'all' || state == 'null') {
         filteredTasks = tasks.toList();
         filterDefaultState = "all";
@@ -110,7 +112,7 @@ class TaskList extends StatelessWidget {
                         var taskId = filteredTasks[index].id;
                         filteredTasks
                             .removeWhere((element) => element.id == taskId);
-                        // context.read<Tasks>().deleteTask(taskId!); ????
+                        provider.personalDataStore.deleteTask(ownerId, taskId!);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text('Task "$taskTitle" removed')));
                       },
@@ -165,9 +167,7 @@ class TaskList extends StatelessWidget {
         ),
       );
     } else {
-      context
-          .watch<TaskDataStoreProvider>()
-          .fetchAllTasksForUser(0); //???? dont you hardcode user
+      provider.fetchAllTasksForUser(0); //???? dont you hardcode user
       return Scaffold(
         appBar: AppBar(
           title: Row(

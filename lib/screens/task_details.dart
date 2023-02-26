@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:to_do_app/models/task_link.dart';
-import 'package:to_do_app/providers/tasks_view_model.dart';
+import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
 const List<String> labels = [
@@ -28,21 +28,19 @@ class TaskDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int ownerId = context.read<Tasks>().ownerId;
-    context.read<Tasks>().updateCurrentTaskId(selectedTaskId);
+    int ownerId = 0; //???? dont you hardcode ownerId
+    final provider = Provider.of<TaskDataStoreProvider>(context);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
-        context.watch<Tasks>().getTaskIdDropdownMenuItems(selectedTaskId);
-    context.read<Tasks>().getTaskImageStack(selectedTaskId);
+        provider.personalDataStore.getTaskIdDropdownMenuItems(selectedTaskId);
+    provider.personalDataStore.getTaskImageStack(selectedTaskId);
 
     bool addLink = false;
     bool isDeleteLink = false;
-    final taskList = context.watch<Tasks>().tasks;
-    final selectedTaskList =
-        taskList.where((element) => element.id == selectedTaskId);
-    final selectedTask = selectedTaskList.first;
+    final selectedTask =
+        provider.personalDataStore.getTaskDetails(selectedTaskId);
     _statusController.text = selectedTask.status;
     List<TaskLink?> currentlyLinkedTasks =
-        context.watch<Tasks>().currentlyLinkedTasks;
+        provider.personalDataStore.currentlyLinkedTasks;
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -59,12 +57,12 @@ class TaskDetails extends StatelessWidget {
                   backgroundColor:
                       MaterialStateProperty.all(const Color(0xff764abc))),
               onPressed: () {
-                var json =
-                    context.read<Tasks>().serializeTaskObject(selectedTask);
-                var qrPainterImage = context.read<Tasks>().generateQRCode(json);
-                context
-                    .read<Tasks>()
-                    .saveQrCodetoAppDirectory(selectedTaskId, qrPainterImage);
+                var json = provider.personalDataStore
+                    .serializeTaskObject(selectedTask);
+                var qrPainterImage =
+                    provider.personalDataStore.generateQRCode(json);
+                provider.personalDataStore.saveQrCodetoAppDirectory(
+                    ownerId, selectedTaskId, qrPainterImage);
               },
               child: Row(
                 children: [
@@ -82,7 +80,7 @@ class TaskDetails extends StatelessWidget {
         child: Column(
           children: [
             /** ???? Image Stack */
-            if (context.watch<Tasks>().cards.isNotEmpty)
+            if (provider.personalDataStore.cards.isNotEmpty)
               SafeArea(
                 child: Column(
                   children: [
@@ -94,7 +92,7 @@ class TaskDetails extends StatelessWidget {
                       width: size.width,
                       child: CardSwiper(
                         scale: 0.0001,
-                        cards: context.watch<Tasks>().cards,
+                        cards: provider.personalDataStore.cards,
                         padding: const EdgeInsets.all(24.0),
                       ),
                     ),
@@ -143,9 +141,8 @@ class TaskDetails extends StatelessWidget {
                             ? _statusController.text
                             : selectedTask.status.toString();
                         if (_formKey.currentState!.validate()) {
-                          context.read<Tasks>().updateSelectedTask(
-                              selectedTaskId, selectedStatus);
-                          context.read<Tasks>().clearLinkedTasks();
+                          provider.personalDataStore.updateSelectedTask(
+                              ownerId, selectedTaskId, selectedStatus);
                         }
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(
@@ -185,8 +182,9 @@ class TaskDetails extends StatelessWidget {
                             Flexible(
                               child: ElevatedButton(
                                 onPressed: () {
-                                  context.read<Tasks>().requestCameraPermission(
-                                      ownerId, selectedTaskId);
+                                  provider.personalDataStore
+                                      .requestCameraPermission(
+                                          ownerId, selectedTaskId);
                                 },
                                 child: const Text('Take photo'),
                               ),
@@ -197,8 +195,7 @@ class TaskDetails extends StatelessWidget {
                             Flexible(
                               child: ElevatedButton(
                                 onPressed: () {
-                                  context
-                                      .read<Tasks>()
+                                  provider.personalDataStore
                                       .requestStoragePermission(
                                           ownerId, selectedTaskId);
                                 },
@@ -209,7 +206,9 @@ class TaskDetails extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (context.read<Tasks>().checkLinksEnablementEditForm)
+                    if (context
+                        .read<TaskDataStoreProvider>()
+                        .checkLinksEnablementEditForm)
                       const Padding(
                         padding: EdgeInsets.only(top: 15),
                         child: Text(
@@ -234,8 +233,7 @@ class TaskDetails extends StatelessWidget {
                           itemBuilder: (context, index) {
                             int linkedTaskId =
                                 currentlyLinkedTasks[index]!.linkedTaskId;
-                            String taskTitle = context
-                                .read<Tasks>()
+                            String taskTitle = provider.personalDataStore
                                 .getTaskDetails(linkedTaskId)!
                                 .taskTitle;
                             return ListTile(
@@ -262,11 +260,9 @@ class TaskDetails extends StatelessWidget {
                                     child: IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () {
-                                        context
-                                            .read<Tasks>()
+                                        provider.personalDataStore
                                             .clearLinkedTaskIds();
-                                        context
-                                            .read<Tasks>()
+                                        provider.personalDataStore
                                             .getCurrentlyLinkedTasks(
                                                 linkedTaskId);
                                         context.push(
@@ -281,8 +277,9 @@ class TaskDetails extends StatelessWidget {
                                       icon: const Icon(Icons.delete),
                                       onPressed: () {
                                         isDeleteLink = true;
-                                        context.read<Tasks>().removeLinkedTask(
-                                            linkedTaskId, selectedTaskId);
+                                        provider.personalDataStore
+                                            .removeLinkedTask(ownerId,
+                                                linkedTaskId, selectedTaskId);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -305,8 +302,9 @@ class TaskDetails extends StatelessWidget {
                       ),
                     ),
                     Visibility(
-                      visible:
-                          context.read<Tasks>().checkLinksEnablementEditForm,
+                      visible: context
+                          .read<TaskDataStoreProvider>()
+                          .checkLinksEnablementEditForm,
                       child: Column(
                         children: <Widget>[
                           Row(
@@ -399,10 +397,12 @@ class TaskDetails extends StatelessWidget {
                                                         'Task ID "$taskIdControllerInt" already linked to this task. Please remove and retry')));
                                           } else {
                                             addLink = true;
-                                            context.read<Tasks>().addLinkedTask(
-                                                selectedTaskId,
-                                                taskIdControllerInt,
-                                                _labelController.text);
+                                            provider.personalDataStore
+                                                .addLinkedTask(
+                                                    ownerId,
+                                                    selectedTaskId,
+                                                    taskIdControllerInt,
+                                                    _labelController.text);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -419,10 +419,12 @@ class TaskDetails extends StatelessWidget {
                                                 element!.relation ==
                                                 labels[0])) {
                                           addLink = true;
-                                          context.read<Tasks>().addLinkedTask(
-                                              selectedTaskId,
-                                              taskIdControllerInt,
-                                              labels[0]);
+                                          provider.personalDataStore
+                                              .addLinkedTask(
+                                                  ownerId,
+                                                  selectedTaskId,
+                                                  taskIdControllerInt,
+                                                  labels[0]);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -434,7 +436,7 @@ class TaskDetails extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${context.read<Tasks>().getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.personalDataStore.getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
                                       }
                                     },
                                   ),

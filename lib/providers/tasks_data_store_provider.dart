@@ -42,13 +42,30 @@ class TaskDataStoreProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  bool get checkLinksEnablementAddForm => tasks!.isNotEmpty;
-  bool get checkLinksEnablementEditForm => tasks!.length > 1;
+  bool get checkLinksEnablementAddForm {
+    if (tasks != null && tasks!.isNotEmpty) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  bool get checkLinksEnablementEditForm {
+    if (tasks != null && tasks!.isNotEmpty && tasks!.length > 1) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 }
 
 //abstract no resp
-abstract class TaskDataStore extends ChangeNotifier {
+abstract class TaskDataStore {
   List<TaskLink?> get linkedTasks => linkedTasks;
+
+  List<TaskLink?> get currentlyLinkedTasks => currentlyLinkedTasks;
+
+  get cards => cards;
 
 //use case – get all of inventory items belonging to a particular user
   Future<List<Task>> getTasksForUser(int ownerId);
@@ -59,15 +76,41 @@ abstract class TaskDataStore extends ChangeNotifier {
 
   void addTask(Task task, List<TaskLink?> linkedTasks);
 
-  void removeLinkedTask(int linkedTaskId, int primaryTaskId);
+  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId);
 
-  void addLinkedTask(int primaryTaskId, int linkedTaskId, String relation);
+  void addLinkedTask(
+      int ownerId, int primaryTaskId, int linkedTaskId, String relation);
+
+  void getTaskImageStack(int selectedTaskId);
+
+  String serializeTaskObject(Task task);
+
+  generateQRCode(String json);
+
+  saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image);
+
+  void updateSelectedTask(
+      int ownerId, int selectedTaskId, String selectedStatus);
+
+  void clearLinkedTasks();
+
+  Future<void> requestCameraPermission(
+      int selectedTaskOwnerId, int selectedTaskId);
+
+  Future<void> requestStoragePermission(
+      int selectedTaskOwnerId, int selectedTaskId);
+
+  void clearLinkedTaskIds();
+
+  void getCurrentlyLinkedTasks(int taskId);
+
+  deleteTask(int ownerId, int taskId);
 }
 
 //single resp : translate use cases t firestore interactions
 //// does not provide data, rednerring, or representation hierarchy..
 ///it only cares about this specific use case – how it gets implemente wrt firestore
-class FirestoreTaskDataStore extends TaskDataStore {
+class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
 //to mock a database here //we have flexibility
   final FirebaseFirestore _firestore;
   FirestoreTaskDataStore({FirebaseFirestore? firestore})
@@ -106,18 +149,93 @@ class FirestoreTaskDataStore extends TaskDataStore {
   List<TaskLink?> linkedTasks = [];
 
   @override
-  void removeLinkedTask(int linkedTaskId, int primaryTaskId) {
+  List<TaskLink?> currentlyLinkedTasks = [];
+
+  @override
+  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) {
     // TODO: implement removeLinkedTask
   }
 
   @override
-  void addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) {
+  void addLinkedTask(
+      int ownerId, int primaryTaskId, int linkedTaskId, String relation) {
     // TODO: implement addLinkedTask
+  }
+
+  @override
+  void getTaskImageStack(int selectedTaskId) {
+    // TODO: implement getTaskImageStack
+  }
+
+  List<TaskImage> _taskImages = [];
+
+  List<TaskImageStack> _cards = [];
+
+  @override
+  List<TaskImageStack> get cards => _cards.toList();
+
+  @override
+  String serializeTaskObject(Task task) {
+    // TODO: implement serializeTaskObject
+    throw UnimplementedError();
+  }
+
+  @override
+  generateQRCode(String json) {
+    // TODO: implement generateQRCode
+    throw UnimplementedError();
+  }
+
+  @override
+  saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image) {
+    // TODO: implement saveQrCodetoAppDirectory
+    throw UnimplementedError();
+  }
+
+  @override
+  void updateSelectedTask(
+      int ownerId, int selectedTaskId, String selectedStatus) {
+    // TODO: implement updateSelectedTask
+  }
+
+  @override
+  void clearLinkedTasks() {
+    // TODO: implement clearLinkedTasks
+  }
+
+  @override
+  Future<void> requestCameraPermission(
+      int selectedTaskOwnerId, int selectedTaskId) {
+    // TODO: implement requestCameraPermission
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> requestStoragePermission(
+      int selectedTaskOwnerId, int selectedTaskId) {
+    // TODO: implement requestStoragePermission
+    throw UnimplementedError();
+  }
+
+  @override
+  void clearLinkedTaskIds() {
+    // TODO: implement clearLinkedTaskIds
+  }
+
+  @override
+  void getCurrentlyLinkedTasks(int taskId) {
+    // TODO: implement getCurrentlyLinkedTasks
+  }
+
+  @override
+  deleteTask(int ownerId, int taskId) {
+    // TODO: implement deleteTask
+    throw UnimplementedError();
   }
 }
 
 //single responsibility: Translate use cases to SQflite as a local datastore
-class FloorSqfliteTaskDataStore extends TaskDataStore {
+class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   final AppDatabase _database;
 
   FloorSqfliteTaskDataStore(AppDatabase database)
@@ -167,50 +285,67 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
     notifyListeners();
   }
 
+  @override
+  deleteTask(int ownerId, int taskId) async {
+    personalTasks!.removeWhere((element) => element.id == taskId);
+    await _database.taskImageDao.deleteLinkedImagesForDeletedTask(taskId);
+    await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
+    await _database.taskDao.deleteTask(taskId);
+    getTasksForUser(ownerId);
+    getCurrentlyLinkedTasks(taskId);
+    notifyListeners();
+  }
+
   //Dropdown Menu Task Ids to link tasks
   List<int?> allTaskIdDropdownMenuItems = [];
 
   List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
   List<int> linkedTaskIds = [];
+
+  @override
   List<TaskLink?> currentlyLinkedTasks = [];
   @override
   List<TaskLink?> linkedTasks = [];
 
   @override
-  List<DropdownMenuItem<int>> getTaskIdDropdownMenuItems(int taskId) {
+  List<DropdownMenuItem<int>>? getTaskIdDropdownMenuItems(int taskId) {
     linkedTaskIds.clear();
-    allTaskIdDropdownMenuItems = personalTasks!.map((e) => e.id).toList();
-    var task = personalTasks!.where((element) => element.id == taskId).toList();
-    if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
-      linkedTaskIds
-          .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
-    } else if (task.isEmpty && linkedTasks.isNotEmpty) {
-      for (var linkedTask in linkedTasks) {
-        linkedTaskIds.add(linkedTask!.linkedTaskId);
+    if (personalTasks != null) {
+      allTaskIdDropdownMenuItems = personalTasks!.map((e) => e.id).toList();
+      var task =
+          personalTasks!.where((element) => element.id == taskId).toList();
+      if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
+        linkedTaskIds
+            .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
+      } else if (task.isEmpty && linkedTasks.isNotEmpty) {
+        for (var linkedTask in linkedTasks) {
+          linkedTaskIds.add(linkedTask!.linkedTaskId);
+        }
       }
-    }
 
-    allTaskIdDropdownMenuItems.remove(taskId);
-    taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
-        .map((taskIdMenuItem) => DropdownMenuItem(
-              enabled: allTaskIdDropdownMenuItems
-                  .where((element) => !linkedTaskIds.contains(element))
-                  .toList()
-                  .contains(taskIdMenuItem),
-              value: taskIdMenuItem,
-              child: Text(
-                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem)!.taskTitle}",
-                style: TextStyle(
-                  color: allTaskIdDropdownMenuItems
-                          .where((element) => !linkedTaskIds.contains(element))
-                          .toList()
-                          .contains(taskIdMenuItem)
-                      ? Colors.blue
-                      : Colors.grey,
+      allTaskIdDropdownMenuItems.remove(taskId);
+      taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
+          .map((taskIdMenuItem) => DropdownMenuItem(
+                enabled: allTaskIdDropdownMenuItems
+                    .where((element) => !linkedTaskIds.contains(element))
+                    .toList()
+                    .contains(taskIdMenuItem),
+                value: taskIdMenuItem,
+                child: Text(
+                  "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem)!.taskTitle}",
+                  style: TextStyle(
+                    color: allTaskIdDropdownMenuItems
+                            .where(
+                                (element) => !linkedTaskIds.contains(element))
+                            .toList()
+                            .contains(taskIdMenuItem)
+                        ? Colors.blue
+                        : Colors.grey,
+                  ),
                 ),
-              ),
-            ))
-        .toList();
+              ))
+          .toList();
+    }
     return taskIdDropdownMenuItems;
   }
 
@@ -225,7 +360,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
 
   //all about linked tasks in task_form.dart
   @override
-  addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) async {
+  addLinkedTask(
+      int ownerId, int primaryTaskId, int linkedTaskId, String relation) async {
     bool isNewTask = checkIsNewTask(primaryTaskId);
     if (!isNewTask) {
       //create linked task with new time
@@ -238,7 +374,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
       await _database.taskDao
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
       getCurrentlyLinkedTasks(primaryTaskId);
-      // getTasksForUser(); ???? why do I need it?
+      getTasksForUser(ownerId);
     } else {
       linkedTasks.add(TaskLink(
           taskId: 9999,
@@ -250,7 +386,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   }
 
   @override
-  removeLinkedTask(int linkedTaskId, int primaryTaskId) async {
+  removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) async {
     bool isNewTask = checkIsNewTask(primaryTaskId);
     if (!isNewTask) {
       //delete linked task from linked tasks table
@@ -258,7 +394,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
       //update date/time in main task table
       await _database.taskDao
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      // getAllTasks(); ???? why do I need this?
+      getTasksForUser(ownerId);
       linkedTaskIds.remove(linkedTaskId);
       getCurrentlyLinkedTasks(primaryTaskId);
     } else {
@@ -269,8 +405,15 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
     notifyListeners();
   }
 
+  @override
   clearLinkedTasks() {
     linkedTasks.clear();
+    notifyListeners();
+  }
+
+  @override
+  clearLinkedTaskIds() {
+    linkedTaskIds.clear();
     notifyListeners();
   }
 
@@ -285,654 +428,143 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
     return isNewTask;
   }
 
+  @override
   void getCurrentlyLinkedTasks(int taskId) async {
     currentlyLinkedTasks =
         await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
     currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
     notifyListeners();
   }
+
+  @override
+  updateSelectedTask(
+      int ownerId, int selectedTaskId, String selectedStatus) async {
+    await _database.taskDao.updateTaskStatusAndTime(
+        selectedTaskId, selectedStatus, DateTime.now().toString());
+    getTasksForUser(ownerId);
+    clearLinkedTasks();
+    notifyListeners();
+  }
+
+  /// Task Image Cards on tasks
+
+  List<TaskImage> _taskImages = [];
+
+  List<TaskImageStack> _cards = [];
+
+  @override
+  List<TaskImageStack> get cards => _cards.toList();
+
+  @override
+  getTaskImageStack(int selectedTaskId) async {
+    _taskImages = await _database.taskImageDao
+        .getExistingTaskImagesByTaskId(selectedTaskId);
+    _cards = _taskImages
+        .map((image) => TaskImageStack(
+              taskImage: image,
+            ))
+        .toList();
+    notifyListeners();
+  }
+
+  @override
+  Future<void> requestCameraPermission(
+      int selectedTaskOwnerId, int selectedTaskId) async {
+    final cameraStatus = await Permission.camera.request();
+
+    if (cameraStatus == PermissionStatus.granted) {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+      if (pickedFile == null) {
+        return;
+      }
+
+      //save to file
+      final directory = await getApplicationDocumentsDirectory();
+      var imageName =
+          '${selectedTaskOwnerId}_${selectedTaskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newImage = File('${directory.path}/$imageName');
+      await pickedFile.saveTo(newImage.path);
+
+      // //save to gallery
+      // final extDirectory = await getExternalStorageDirectory();
+      // final galleryDirectory = '${extDirectory!.path}/DCIM';
+      // final originalFile = File(pickedFile.path);
+      // final newFile = await originalFile.copy('$galleryDirectory/$imageName');
+      // await pickedFile.saveTo(newFile.path);
+
+      await _database.taskImageDao.insertTaskImage(TaskImage(
+          taskId: selectedTaskId,
+          ownerId: selectedTaskOwnerId,
+          imagePath: newImage.path,
+          uploadDate: DateTime.now().toString()));
+
+      getTaskImageStack(selectedTaskId);
+      notifyListeners();
+    }
+  }
+
+  @override
+  Future<void> requestStoragePermission(
+      int selectedTaskOwnerId, int selectedTaskId) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) {
+      return;
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+    var imageName =
+        '${selectedTaskOwnerId}_${selectedTaskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final newImage = File('${directory.path}/$imageName');
+    await pickedFile.saveTo(newImage.path);
+    await _database.taskImageDao.insertTaskImage(TaskImage(
+        taskId: selectedTaskId,
+        ownerId: selectedTaskOwnerId,
+        imagePath: newImage.path,
+        uploadDate: DateTime.now().toString()));
+
+    getTaskImageStack(selectedTaskId);
+    notifyListeners();
+  }
+
+  @override
+  String serializeTaskObject(Task task) {
+    Map<String, dynamic> toMap() {
+      return {
+        'taskTitle': task.taskTitle,
+        'description': task.description,
+        'ownerId': task.ownerId,
+        'status': task.status,
+        'lastUpdate': task.lastUpdate,
+      };
+    }
+
+    String toJson() => json.encode(toMap());
+    return toJson();
+  }
+
+  @override
+  QrPainter generateQRCode(String json) {
+    final qrCode = QrPainter(
+      data: json,
+      version: QrVersions.auto,
+      color: Colors.white,
+    );
+    // sleep(Duration(seconds: 5));
+    return qrCode;
+  }
+
+  @override
+  saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image) async {
+    //save to file
+    final qrCode = await image.toImageData(2000);
+    final bytes = Uint8List.view(qrCode!.buffer);
+    final directory = await getApplicationDocumentsDirectory();
+    var imageName = '${ownerId}_${taskId}_QrImage.jpg';
+    final newImage = File('${directory.path}/$imageName');
+    await newImage.writeAsBytes(bytes);
+
+    Share.shareFiles([newImage.path], text: imageName);
+  }
 }
-/*
-  void getAllTasks() async {
-    // if (created == true) {
-    // created = false;
-    // for (var index = 0; index < 4; index++) {
-    //   await addTask(
-    //       Task(
-    //           ownerId: 0,
-    //           taskTitle: "Dummy Title $index",
-    //           description: "Dummy Description $index",
-    //           status: index == 0 ? "open" : "in progress",
-    //           lastUpdate: DateTime.now().toString()),
-    //       linkedTasks);
-    // }
-    // }
-    _tasks = await _database.taskDao.getAllTasks();
-    _tasks!.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
-    //notifyListeners();
-  }
-
-  //???? Hard codes for now
-  int ownerId = 0;
-  int taskId = 999999;
-
-  updateCurrentTaskId(int currentTaskId) {
-    taskId = currentTaskId;
-  }
-
-  applyFilter(String filter) {
-    if (filter != 'all') {
-      return _tasks!.where((x) => x.status.contains(filter)).toList();
-    } else {
-      return _tasks!.toList();
-    }
-  }
-
-  deleteTask(int taskId) async {
-    _tasks!.removeWhere((element) => element.id == taskId);
-    await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
-    await _database.taskDao.deleteTask(taskId);
-    getAllTasks();
-    getCurrentlyLinkedTasks(taskId);
-    //notifyListeners();
-  }
-
-  addTask(Task task, List<TaskLink?> linkedTasks) async {
-    await _database.taskDao.insertTask(task);
-    if (linkedTasks.isNotEmpty) {
-      int? latestTaskId =
-          await _database.taskDao.findLatestTaskIdByOwner(task.ownerId);
-      for (var element in linkedTasks) {
-        await _database.taskLinkDao.insertTaskLink(TaskLink(
-            taskId: latestTaskId!,
-            relation: element!.relation,
-            linkedTaskId: element.linkedTaskId,
-            lastUpdate: DateTime.now().toString()));
-      }
-    }
-    getAllTasks();
-    clearLinkedTasks();
-    //notifyListeners();
-  }
-
-  //Linked Tasks to show linked tasks
-  List<TaskLink?> linkedTasks = [];
-
-  bool checkIsNewTask(int taskId) {
-    bool isNewTask;
-    var task = _tasks!.where((element) => element.id == taskId).toList();
-    if (task.isNotEmpty) {
-      isNewTask = false;
-    } else {
-      isNewTask = true;
-    }
-    return isNewTask;
-  }
-
-  addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) async {
-    bool isNewTask = checkIsNewTask(primaryTaskId);
-    if (!isNewTask) {
-      //create linked task with new time
-      await _database.taskLinkDao.insertTaskLink(TaskLink(
-          taskId: primaryTaskId,
-          relation: relation,
-          linkedTaskId: linkedTaskId,
-          lastUpdate: DateTime.now().toString()));
-      //Update main task with current time
-      await _database.taskDao
-          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      getCurrentlyLinkedTasks(primaryTaskId);
-      getAllTasks();
-    } else {
-      linkedTasks.add(TaskLink(
-          taskId: 9999,
-          relation: relation,
-          linkedTaskId: linkedTaskId,
-          lastUpdate: DateTime.now().toString()));
-    }
-    //notifyListeners();
-  }
-
-  removeLinkedTask(int linkedTaskId, int primaryTaskId) async {
-    bool isNewTask = checkIsNewTask(primaryTaskId);
-    if (!isNewTask) {
-      //delete linked task from linked tasks table
-      await _database.taskLinkDao.deleteLinkedTask(linkedTaskId, primaryTaskId);
-      //update date/time in main task table
-      await _database.taskDao
-          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      getAllTasks();
-      linkedTaskIds.remove(linkedTaskId);
-      getCurrentlyLinkedTasks(primaryTaskId);
-    } else {
-      linkedTasks
-          .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
-      linkedTaskIds.remove(linkedTaskId);
-    }
-    //notifyListeners();
-  }
-
-  Task? getTaskDetails(int? taskId) {
-    if (taskId.toString().isNotEmpty && taskId != 0) {
-      return _tasks!.where((element) => taskId == element.id).first;
-    } else {
-      return null;
-    }
-  }
-
-  //Dropdown Menu Task Ids to link tasks
-  List<int?> allTaskIdDropdownMenuItems = [];
-
-  List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
-  List<int> linkedTaskIds = [];
-
-  List<DropdownMenuItem<int>> getTaskIdDropdownMenuItems(int taskId) {
-    linkedTaskIds.clear();
-    allTaskIdDropdownMenuItems = _tasks!.map((e) => e.id).toList();
-    var task = _tasks!.where((element) => element.id == taskId).toList();
-    if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
-      linkedTaskIds
-          .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
-    } else if (task.isEmpty && linkedTasks.isNotEmpty) {
-      for (var linkedTask in linkedTasks) {
-        linkedTaskIds.add(linkedTask!.linkedTaskId);
-      }
-    }
-
-    allTaskIdDropdownMenuItems.remove(taskId);
-    taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
-        .map((taskIdMenuItem) => DropdownMenuItem(
-              enabled: allTaskIdDropdownMenuItems
-                  .where((element) => !linkedTaskIds.contains(element))
-                  .toList()
-                  .contains(taskIdMenuItem),
-              value: taskIdMenuItem,
-              child: Text(
-                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem)!.taskTitle}",
-                style: TextStyle(
-                  color: allTaskIdDropdownMenuItems
-                          .where((element) => !linkedTaskIds.contains(element))
-                          .toList()
-                          .contains(taskIdMenuItem)
-                      ? Colors.blue
-                      : Colors.grey,
-                ),
-              ),
-            ))
-        .toList();
-    return taskIdDropdownMenuItems;
-  }
-
-  List<TaskLink?> currentlyLinkedTasks = [];
-
-  void getCurrentlyLinkedTasks(int taskId) async {
-    currentlyLinkedTasks =
-        await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
-    currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
-    //notifyListeners();
-  }
-
-  updateSelectedTask(int selectedTaskId, String selectedStatus) async {
-    await _database.taskDao.updateTaskStatusAndTime(
-        selectedTaskId, selectedStatus, DateTime.now().toString());
-    getAllTasks();
-    //notifyListeners();
-  }
-
-  bool get checkLinksEnablementAddForm => _tasks!.isNotEmpty;
-  bool get checkLinksEnablementEditForm => _tasks!.length > 1;
-
-  clearLinkedTasks() {
-    linkedTasks.clear();
-    //notifyListeners();
-  }
-
-  clearLinkedTaskIds() {
-    linkedTaskIds.clear();
-    //notifyListeners();
-  }
-
-  /// Task Image Cards on tasks
-
-  List<TaskImage> _taskImages = [];
-
-  List<TaskImageStack> _cards = [];
-
-  List<TaskImageStack> get cards {
-    return _cards.toList();
-  }
-
-  getTaskImageStack(int selectedTaskId) async {
-    _taskImages = await _database.taskImageDao
-        .getExistingTaskImagesByTaskId(selectedTaskId);
-    _cards = _taskImages
-        .map((image) => TaskImageStack(
-              taskImage: image,
-            ))
-        .toList();
-    //notifyListeners();
-  }
-
-  Future<void> requestCameraPermission(
-      int selectedTaskOwnerId, int selectedTaskId) async {
-    final cameraStatus = await Permission.camera.request();
-
-    if (cameraStatus == PermissionStatus.granted) {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.camera);
-      if (pickedFile == null) {
-        return;
-      }
-
-      //save to file
-      final directory = await getApplicationDocumentsDirectory();
-      var imageName =
-          '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final newImage = File('${directory.path}/$imageName');
-      await pickedFile.saveTo(newImage.path);
-
-      // //save to gallery
-      // final extDirectory = await getExternalStorageDirectory();
-      // final galleryDirectory = '${extDirectory!.path}/DCIM';
-      // final originalFile = File(pickedFile.path);
-      // final newFile = await originalFile.copy('$galleryDirectory/$imageName');
-      // await pickedFile.saveTo(newFile.path);
-
-      await _database.taskImageDao.insertTaskImage(TaskImage(
-          taskId: selectedTaskId,
-          ownerId: selectedTaskOwnerId,
-          imagePath: newImage.path,
-          uploadDate: DateTime.now().toString()));
-
-      getTaskImageStack(selectedTaskId);
-      //notifyListeners();
-    }
-  }
-
-  Future<void> requestStoragePermission(
-      int selectedTaskOwnerId, int selectedTaskId) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) {
-      return;
-    }
-
-    final directory = await getApplicationDocumentsDirectory();
-    var imageName =
-        '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final newImage = File('${directory.path}/$imageName');
-    await pickedFile.saveTo(newImage.path);
-    await _database.taskImageDao.insertTaskImage(TaskImage(
-        taskId: selectedTaskId,
-        ownerId: selectedTaskOwnerId,
-        imagePath: newImage.path,
-        uploadDate: DateTime.now().toString()));
-
-    getTaskImageStack(selectedTaskId);
-    //notifyListeners();
-  }
-
-  String serializeTaskObject(Task task) {
-    Map<String, dynamic> toMap() {
-      return {
-        'taskTitle': task.taskTitle,
-        'description': task.description,
-        'ownerId': task.ownerId,
-        'status': task.status,
-        'lastUpdate': task.lastUpdate,
-      };
-    }
-
-    String toJson() => json.encode(toMap());
-    return toJson();
-  }
-
-  QrPainter generateQRCode(String json) {
-    final qrCode = QrPainter(
-      data: json,
-      version: QrVersions.auto,
-      color: Colors.white,
-    );
-    // sleep(Duration(seconds: 5));
-    return qrCode;
-  }
-
-  saveQrCodetoAppDirectory(int taskId, QrPainter image) async {
-    //save to file
-    final qrCode = await image.toImageData(2000);
-    final bytes = Uint8List.view(qrCode!.buffer);
-    final directory = await getApplicationDocumentsDirectory();
-    var imageName = '${ownerId}_${taskId}_QrImage.jpg';
-    final newImage = File('${directory.path}/$imageName');
-    await newImage.writeAsBytes(bytes);
-
-    Share.shareFiles([newImage.path], text: imageName);
-  }
-}*/
-
-/*
-  final AppDatabase _database;
-
-  Tasks(this._database);
-  //All about tasks
-  List<Task>? _tasks = [];
-
-  List<Task> get tasks => _tasks!.toList();
-  // bool created = true;
-
-  void getAllTasks() async {
-    // if (created == true) {
-    // created = false;
-    // for (var index = 0; index < 4; index++) {
-    //   await addTask(
-    //       Task(
-    //           ownerId: 0,
-    //           taskTitle: "Dummy Title $index",
-    //           description: "Dummy Description $index",
-    //           status: index == 0 ? "open" : "in progress",
-    //           lastUpdate: DateTime.now().toString()),
-    //       linkedTasks);
-    // }
-    // }
-    _tasks = await _database.taskDao.getAllTasks();
-    _tasks!.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
-    //notifyListeners();
-  }
-
-  //???? Hard codes for now
-  int ownerId = 0;
-  int taskId = 999999;
-
-  updateCurrentTaskId(int currentTaskId) {
-    taskId = currentTaskId;
-  }
-
-  applyFilter(String filter) {
-    if (filter != 'all') {
-      return _tasks!.where((x) => x.status.contains(filter)).toList();
-    } else {
-      return _tasks!.toList();
-    }
-  }
-
-  deleteTask(int taskId) async {
-    _tasks!.removeWhere((element) => element.id == taskId);
-    await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
-    await _database.taskDao.deleteTask(taskId);
-    getAllTasks();
-    getCurrentlyLinkedTasks(taskId);
-    //notifyListeners();
-  }
-
-  addTask(Task task, List<TaskLink?> linkedTasks) async {
-    await _database.taskDao.insertTask(task);
-    if (linkedTasks.isNotEmpty) {
-      int? latestTaskId =
-          await _database.taskDao.findLatestTaskIdByOwner(task.ownerId);
-      for (var element in linkedTasks) {
-        await _database.taskLinkDao.insertTaskLink(TaskLink(
-            taskId: latestTaskId!,
-            relation: element!.relation,
-            linkedTaskId: element.linkedTaskId,
-            lastUpdate: DateTime.now().toString()));
-      }
-    }
-    getAllTasks();
-    clearLinkedTasks();
-    //notifyListeners();
-  }
-
-  //Linked Tasks to show linked tasks
-  List<TaskLink?> linkedTasks = [];
-
-  bool checkIsNewTask(int taskId) {
-    bool isNewTask;
-    var task = _tasks!.where((element) => element.id == taskId).toList();
-    if (task.isNotEmpty) {
-      isNewTask = false;
-    } else {
-      isNewTask = true;
-    }
-    return isNewTask;
-  }
-
-  addLinkedTask(int primaryTaskId, int linkedTaskId, String relation) async {
-    bool isNewTask = checkIsNewTask(primaryTaskId);
-    if (!isNewTask) {
-      //create linked task with new time
-      await _database.taskLinkDao.insertTaskLink(TaskLink(
-          taskId: primaryTaskId,
-          relation: relation,
-          linkedTaskId: linkedTaskId,
-          lastUpdate: DateTime.now().toString()));
-      //Update main task with current time
-      await _database.taskDao
-          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      getCurrentlyLinkedTasks(primaryTaskId);
-      getAllTasks();
-    } else {
-      linkedTasks.add(TaskLink(
-          taskId: 9999,
-          relation: relation,
-          linkedTaskId: linkedTaskId,
-          lastUpdate: DateTime.now().toString()));
-    }
-    //notifyListeners();
-  }
-
-  removeLinkedTask(int linkedTaskId, int primaryTaskId) async {
-    bool isNewTask = checkIsNewTask(primaryTaskId);
-    if (!isNewTask) {
-      //delete linked task from linked tasks table
-      await _database.taskLinkDao.deleteLinkedTask(linkedTaskId, primaryTaskId);
-      //update date/time in main task table
-      await _database.taskDao
-          .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      getAllTasks();
-      linkedTaskIds.remove(linkedTaskId);
-      getCurrentlyLinkedTasks(primaryTaskId);
-    } else {
-      linkedTasks
-          .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
-      linkedTaskIds.remove(linkedTaskId);
-    }
-    //notifyListeners();
-  }
-
-  Task? getTaskDetails(int? taskId) {
-    if (taskId.toString().isNotEmpty && taskId != 0) {
-      return _tasks!.where((element) => taskId == element.id).first;
-    } else {
-      return null;
-    }
-  }
-
-  //Dropdown Menu Task Ids to link tasks
-  List<int?> allTaskIdDropdownMenuItems = [];
-
-  List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
-  List<int> linkedTaskIds = [];
-
-  List<DropdownMenuItem<int>> getTaskIdDropdownMenuItems(int taskId) {
-    linkedTaskIds.clear();
-    allTaskIdDropdownMenuItems = _tasks!.map((e) => e.id).toList();
-    var task = _tasks!.where((element) => element.id == taskId).toList();
-    if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
-      linkedTaskIds
-          .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
-    } else if (task.isEmpty && linkedTasks.isNotEmpty) {
-      for (var linkedTask in linkedTasks) {
-        linkedTaskIds.add(linkedTask!.linkedTaskId);
-      }
-    }
-
-    allTaskIdDropdownMenuItems.remove(taskId);
-    taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
-        .map((taskIdMenuItem) => DropdownMenuItem(
-              enabled: allTaskIdDropdownMenuItems
-                  .where((element) => !linkedTaskIds.contains(element))
-                  .toList()
-                  .contains(taskIdMenuItem),
-              value: taskIdMenuItem,
-              child: Text(
-                "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem)!.taskTitle}",
-                style: TextStyle(
-                  color: allTaskIdDropdownMenuItems
-                          .where((element) => !linkedTaskIds.contains(element))
-                          .toList()
-                          .contains(taskIdMenuItem)
-                      ? Colors.blue
-                      : Colors.grey,
-                ),
-              ),
-            ))
-        .toList();
-    return taskIdDropdownMenuItems;
-  }
-
-  List<TaskLink?> currentlyLinkedTasks = [];
-
-  void getCurrentlyLinkedTasks(int taskId) async {
-    currentlyLinkedTasks =
-        await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
-    currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
-    //notifyListeners();
-  }
-
-  updateSelectedTask(int selectedTaskId, String selectedStatus) async {
-    await _database.taskDao.updateTaskStatusAndTime(
-        selectedTaskId, selectedStatus, DateTime.now().toString());
-    getAllTasks();
-    //notifyListeners();
-  }
-
-  bool get checkLinksEnablementAddForm => _tasks!.isNotEmpty;
-  bool get checkLinksEnablementEditForm => _tasks!.length > 1;
-
-  clearLinkedTasks() {
-    linkedTasks.clear();
-    //notifyListeners();
-  }
-
-  clearLinkedTaskIds() {
-    linkedTaskIds.clear();
-    //notifyListeners();
-  }
-
-  /// Task Image Cards on tasks
-
-  List<TaskImage> _taskImages = [];
-
-  List<TaskImageStack> _cards = [];
-
-  List<TaskImageStack> get cards {
-    return _cards.toList();
-  }
-
-  getTaskImageStack(int selectedTaskId) async {
-    _taskImages = await _database.taskImageDao
-        .getExistingTaskImagesByTaskId(selectedTaskId);
-    _cards = _taskImages
-        .map((image) => TaskImageStack(
-              taskImage: image,
-            ))
-        .toList();
-    //notifyListeners();
-  }
-
-  Future<void> requestCameraPermission(
-      int selectedTaskOwnerId, int selectedTaskId) async {
-    final cameraStatus = await Permission.camera.request();
-
-    if (cameraStatus == PermissionStatus.granted) {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.camera);
-      if (pickedFile == null) {
-        return;
-      }
-
-      //save to file
-      final directory = await getApplicationDocumentsDirectory();
-      var imageName =
-          '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final newImage = File('${directory.path}/$imageName');
-      await pickedFile.saveTo(newImage.path);
-
-      // //save to gallery
-      // final extDirectory = await getExternalStorageDirectory();
-      // final galleryDirectory = '${extDirectory!.path}/DCIM';
-      // final originalFile = File(pickedFile.path);
-      // final newFile = await originalFile.copy('$galleryDirectory/$imageName');
-      // await pickedFile.saveTo(newFile.path);
-
-      await _database.taskImageDao.insertTaskImage(TaskImage(
-          taskId: selectedTaskId,
-          ownerId: selectedTaskOwnerId,
-          imagePath: newImage.path,
-          uploadDate: DateTime.now().toString()));
-
-      getTaskImageStack(selectedTaskId);
-      //notifyListeners();
-    }
-  }
-
-  Future<void> requestStoragePermission(
-      int selectedTaskOwnerId, int selectedTaskId) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) {
-      return;
-    }
-
-    final directory = await getApplicationDocumentsDirectory();
-    var imageName =
-        '${ownerId}_${taskId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final newImage = File('${directory.path}/$imageName');
-    await pickedFile.saveTo(newImage.path);
-    await _database.taskImageDao.insertTaskImage(TaskImage(
-        taskId: selectedTaskId,
-        ownerId: selectedTaskOwnerId,
-        imagePath: newImage.path,
-        uploadDate: DateTime.now().toString()));
-
-    getTaskImageStack(selectedTaskId);
-    //notifyListeners();
-  }
-
-  String serializeTaskObject(Task task) {
-    Map<String, dynamic> toMap() {
-      return {
-        'taskTitle': task.taskTitle,
-        'description': task.description,
-        'ownerId': task.ownerId,
-        'status': task.status,
-        'lastUpdate': task.lastUpdate,
-      };
-    }
-
-    String toJson() => json.encode(toMap());
-    return toJson();
-  }
-
-  QrPainter generateQRCode(String json) {
-    final qrCode = QrPainter(
-      data: json,
-      version: QrVersions.auto,
-      color: Colors.white,
-    );
-    // sleep(Duration(seconds: 5));
-    return qrCode;
-  }
-
-  saveQrCodetoAppDirectory(int taskId, QrPainter image) async {
-    //save to file
-    final qrCode = await image.toImageData(2000);
-    final bytes = Uint8List.view(qrCode!.buffer);
-    final directory = await getApplicationDocumentsDirectory();
-    var imageName = '${ownerId}_${taskId}_QrImage.jpg';
-    final newImage = File('${directory.path}/$imageName');
-    await newImage.writeAsBytes(bytes);
-
-    Share.shareFiles([newImage.path], text: imageName);
-  }
-}*/

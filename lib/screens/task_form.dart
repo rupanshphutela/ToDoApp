@@ -30,7 +30,6 @@ class TaskForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     int ownerId = 0; //???? dont you hardcode ownerId
-    // context.read<Tasks>().updateCurrentTaskId(999999);
     int taskId = 0; //???? dont you hardcode taskId
     bool addLink = false;
     bool isDeleteLink = false;
@@ -185,7 +184,7 @@ class TaskForm extends StatelessWidget {
 
                                         provider.personalDataStore
                                             .removeLinkedTask(
-                                                linkedTaskId, taskId);
+                                                ownerId, linkedTaskId, taskId);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -301,6 +300,7 @@ class TaskForm extends StatelessWidget {
                                             addLink = true;
                                             provider.personalDataStore
                                                 .addLinkedTask(
+                                                    ownerId,
                                                     taskId,
                                                     taskIdControllerInt,
                                                     _labelController.text);
@@ -320,6 +320,7 @@ class TaskForm extends StatelessWidget {
                                           addLink = true;
                                           provider.personalDataStore
                                               .addLinkedTask(
+                                                  ownerId,
                                                   taskId,
                                                   taskIdControllerInt,
                                                   labels[0]);
