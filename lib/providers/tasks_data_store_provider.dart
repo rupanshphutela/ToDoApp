@@ -446,15 +446,59 @@ class FirestoreTaskDataStore extends TaskDataStore {
   @override
   List<Group> get groups => _groups.toList();
 
+  List<int?> allTaskIdDropdownMenuItems = [];
+
+  List<DropdownMenuItem<int>> taskIdDropdownMenuItems = [];
+  List<int> linkedTaskIds = [];
+
   @override
   List<DropdownMenuItem<int>>? getTaskIdDropdownMenuItems(int taskId) {
-    return null;
+    linkedTaskIds.clear();
+    if (sharedTasks != null) {
+      allTaskIdDropdownMenuItems = sharedTasks!.map((e) => e.id).toList();
+      var task = sharedTasks!.where((element) => element.id == taskId).toList();
+      if (task.isNotEmpty && currentlyLinkedTasks.isNotEmpty) {
+        linkedTaskIds
+            .addAll(currentlyLinkedTasks.map((task) => task!.linkedTaskId));
+      } else if (task.isEmpty && linkedTasks.isNotEmpty) {
+        for (var linkedTask in linkedTasks) {
+          linkedTaskIds.add(linkedTask!.linkedTaskId);
+        }
+      }
+
+      allTaskIdDropdownMenuItems.remove(taskId);
+      taskIdDropdownMenuItems = allTaskIdDropdownMenuItems
+          .map((taskIdMenuItem) => DropdownMenuItem(
+                enabled: allTaskIdDropdownMenuItems
+                    .where((element) => !linkedTaskIds.contains(element))
+                    .toList()
+                    .contains(taskIdMenuItem),
+                value: taskIdMenuItem,
+                child: Text(
+                  "$taskIdMenuItem: ${getTaskDetails(taskIdMenuItem!)!.taskTitle}",
+                  style: TextStyle(
+                    color: allTaskIdDropdownMenuItems
+                            .where(
+                                (element) => !linkedTaskIds.contains(element))
+                            .toList()
+                            .contains(taskIdMenuItem)
+                        ? Colors.blue
+                        : Colors.grey,
+                  ),
+                ),
+              ))
+          .toList();
+    }
+    return taskIdDropdownMenuItems;
   }
 
   @override
   getTaskDetails(int taskId) {
-    // TODO: implement getTaskDetails
-    throw UnimplementedError();
+    if (taskId.toString().isNotEmpty && taskId != 0) {
+      return sharedTasks!.where((element) => taskId == element.id).first;
+    } else {
+      return null;
+    }
   }
 
   @override
@@ -490,8 +534,23 @@ class FirestoreTaskDataStore extends TaskDataStore {
   List<TaskLink?> currentlyLinkedTasks = [];
 
   @override
-  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) {
-    // TODO: implement removeLinkedTask
+  void removeLinkedTask(
+      int ownerId, int linkedTaskId, int primaryTaskId) async {
+    bool isNewTask = checkIsNewTask(primaryTaskId);
+    if (!isNewTask) {
+      //delete linked task from linked tasks table
+      // await _database.taskLinkDao.deleteLinkedTask(linkedTaskId, primaryTaskId);
+      // //update date/time in main task table
+      // await _database.taskDao
+      //     .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
+      // linkedTaskIds.remove(linkedTaskId);
+      // getCurrentlyLinkedTasks(primaryTaskId);
+    } else {
+      linkedTasks
+          .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
+      linkedTaskIds.remove(linkedTaskId);
+    }
+    // notifyListeners();
   }
 
   bool checkIsNewTask(int taskId) {

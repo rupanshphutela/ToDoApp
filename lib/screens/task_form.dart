@@ -203,8 +203,8 @@ class TaskForm extends StatelessWidget {
                                 itemBuilder: (context, index) {
                                   int linkedTaskId =
                                       linkedTasks[index]!.linkedTaskId;
-                                  String taskTitle = provider.personalDataStore
-                                      .getTaskDetails(linkedTaskId)!
+                                  String taskTitle = provider
+                                      .getTaskDetails(linkedTaskId, type)!
                                       .taskTitle;
                                   return ListTile(
                                     isThreeLine: true,
@@ -229,11 +229,11 @@ class TaskForm extends StatelessWidget {
                                           child: IconButton(
                                             icon: const Icon(Icons.edit),
                                             onPressed: () {
-                                              provider.personalDataStore
-                                                  .clearLinkedTaskIds(); // ???? move this to tasks edit page
-                                              provider.personalDataStore
-                                                  .getCurrentlyLinkedTasks(
-                                                      linkedTaskId); // ???? move this to tasks edit page
+                                              provider.clearLinkedTaskIds(
+                                                  type); // ???? move this to tasks edit page
+                                              provider.getCurrentlyLinkedTasks(
+                                                  linkedTaskId,
+                                                  type); // ???? move this to tasks edit page
                                               context.push(
                                                   '/taskdetail?taskId=$linkedTaskId');
                                             },
