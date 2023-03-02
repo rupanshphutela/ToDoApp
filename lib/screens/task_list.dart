@@ -114,8 +114,8 @@ class TaskList extends StatelessWidget {
                         var taskId = filteredTasks[index].id;
                         filteredTasks
                             .removeWhere((element) => element.id == taskId);
-                        provider.personalDataStore.deleteTask(
-                            ownerId, taskId!, provider.fetchAllTasksForUser);
+                        provider.deleteTask(
+                            ownerId, taskId!, filteredTasks[index].type);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text('Task "$taskTitle" removed')));
                       },
@@ -129,7 +129,7 @@ class TaskList extends StatelessWidget {
                           style: const TextStyle(fontSize: 20),
                         ),
                         subtitle: Text(
-                            'Task ID: ${filteredTasks[index].id}, \nLast Updated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
+                            'Type: ${filteredTasks[index].type}${(filteredTasks[index].type == "shared" ? ", Group: ${filteredTasks[index].group}" : "")} \nUpdated:  ${filteredTasks[index].lastUpdate.toString().substring(0, 19)}'),
                         trailing: CircleAvatar(
                           backgroundColor: Colors.brown,
                           child: IconButton(
@@ -138,9 +138,12 @@ class TaskList extends StatelessWidget {
                             onPressed: () {
                               var taskId = int.parse(
                                   (filteredTasks[index].id).toString());
-                              provider.personalDataStore.getCurrentlyLinkedTasks(
-                                  taskId); // ???? move this to tasks edit page
-                              context.push('/taskdetail?task_id=$taskId');
+                              provider.getCurrentlyLinkedTasks(
+                                  taskId,
+                                  filteredTasks[index]
+                                      .type); // ???? move this to tasks edit page
+                              context.push(
+                                  '/taskdetail?taskId=$taskId&type=${filteredTasks[index].type}');
                             },
                           ),
                         ),
@@ -153,11 +156,18 @@ class TaskList extends StatelessWidget {
           ),
         ),
         bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(
                 icon: Icon(Icons.home), label: 'Home', tooltip: 'Home'),
             BottomNavigationBarItem(
-                icon: Icon(Icons.add), label: 'Add Task', tooltip: 'Add Task'),
+                icon: Icon(Icons.add),
+                label: 'Personal Task',
+                tooltip: 'Personal Task'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.add),
+                label: 'Shared Task',
+                tooltip: 'Shared Task'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.group),
                 label: 'Shared Groups',
@@ -169,8 +179,12 @@ class TaskList extends StatelessWidget {
             } else if (index == 1) {
               provider.disableGroupsDropdown();
               provider.getUserGroups(ownerId);
-              context.push('/task');
+              context.push('/task?type=personal');
             } else if (index == 2) {
+              provider.enableGroupsDropdown();
+              provider.getUserGroups(ownerId);
+              context.push('/task?type=shared');
+            } else if (index == 3) {
               provider.getAllGroups();
               context.push('/groups?ownerId=$ownerId');
             }
@@ -179,6 +193,8 @@ class TaskList extends StatelessWidget {
       );
     } else {
       provider.fetchAllTasksForUser(0); //???? dont you hardcode user
+      provider.getAllGroups();
+      provider.getUserGroups(ownerId);
       return Scaffold(
         appBar: AppBar(
           title: Row(
@@ -216,11 +232,18 @@ class TaskList extends StatelessWidget {
           ),
         ),
         bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(
                 icon: Icon(Icons.home), label: 'Home', tooltip: 'Home'),
             BottomNavigationBarItem(
-                icon: Icon(Icons.add), label: 'Add Task', tooltip: 'Add Task'),
+                icon: Icon(Icons.add),
+                label: 'Personal Task',
+                tooltip: 'Personal Task'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.add),
+                label: 'Shared Task',
+                tooltip: 'Shared Task'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.group),
                 label: 'Shared Groups',
@@ -232,8 +255,12 @@ class TaskList extends StatelessWidget {
             } else if (index == 1) {
               provider.disableGroupsDropdown();
               provider.getUserGroups(ownerId);
-              context.push('/task');
+              context.push('/task?type=personal');
             } else if (index == 2) {
+              provider.disableGroupsDropdown();
+              provider.getUserGroups(ownerId);
+              context.push('/task?type=shared');
+            } else if (index == 3) {
               provider.getAllGroups();
               context.push('/groups?ownerId=$ownerId');
             }

@@ -44,7 +44,8 @@ class GroupForm extends StatelessWidget {
                 if (value == null || value.isEmpty) {
                   return 'Please enter some text';
                 }
-                if (provider.sharedDataStore.groups
+                if (provider
+                    .groups()
                     .any((element) => element.groupName == value)) {
                   return 'Please enter a distinct non-existing group name';
                 }

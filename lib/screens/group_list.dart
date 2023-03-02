@@ -17,8 +17,8 @@ class GroupList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<TaskDataStoreProvider>(context);
-    List<Group> groups = provider.sharedDataStore.groups;
-    List<String>? userGroupNames = provider.personalDataStore.userGroupNames;
+    List<Group> groups = provider.groups();
+    List<String>? userGroupNames = provider.userGroupNames();
 
     if (groups.isNotEmpty) {
       return Scaffold(
@@ -55,7 +55,7 @@ class GroupList extends StatelessWidget {
                       subtitle: Text('Group ID: ${groups[index].id}'),
                       trailing: Switch(
                         // This bool value toggles the switch.
-                        value: userGroupNames.contains(groups[index].groupName)
+                        value: userGroupNames!.contains(groups[index].groupName)
                             ? true
                             : false,
                         activeColor: Colors.teal,
@@ -96,8 +96,8 @@ class GroupList extends StatelessWidget {
         ),
       );
     } else {
-      provider.sharedDataStore.getAllGroups();
-      provider.personalDataStore.getUserGroups(ownerId);
+      provider.getAllGroups();
+      provider.getUserGroups(ownerId);
 
       return Scaffold(
         appBar: AppBar(

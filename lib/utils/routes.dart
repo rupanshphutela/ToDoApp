@@ -13,19 +13,26 @@ final routes = [
         TaskList(title: 'Tasks', state: state.queryParams['state'].toString()),
   ),
   GoRoute(
-    path: '/task',
-    builder: (context, state) => TaskForm(title: 'Task Form'),
-    // builder: (context, state) {
-    //   final title = state.params['id1']!;
-    //   final int taskId = int.parse(state.params['id2']!);
-    //   return TaskDetails(selectedTaskIndex: taskId, title: title);
-    // },
-  ),
+      path: '/task',
+      builder: (context, state) {
+        final String type = state.queryParams['type'].toString();
+        return TaskForm(title: 'Task Form', type: type);
+      }
+
+      // builder: (context, state) {
+      //   final title = state.params['id1']!;
+      //   final int taskId = int.parse(state.params['id2']!);
+      //   return TaskDetails(selectedTaskIndex: taskId, title: title);
+      // },
+      ),
   GoRoute(
       path: '/taskdetail',
       builder: (context, state) {
-        final int taskId = int.parse(state.queryParams['task_id'].toString());
-        return TaskDetails(selectedTaskId: taskId, title: 'Task Details');
+        final int taskId = int.parse(state.queryParams['taskId'].toString());
+        final String type = state.queryParams['type'].toString();
+
+        return TaskDetails(
+            selectedTaskId: taskId, title: 'Task Details', type: type);
       }),
   GoRoute(
       path: '/qr_scanner',

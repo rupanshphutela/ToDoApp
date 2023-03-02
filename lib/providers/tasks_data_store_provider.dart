@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:floor/floor.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -85,7 +84,6 @@ class TaskDataStoreProvider with ChangeNotifier {
 
   void getAllGroups() {
     sharedDataStore.getAllGroups();
-    notifyListeners();
   }
 
   void getUserGroups(int ownerId) async {
@@ -112,8 +110,8 @@ class TaskDataStoreProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void addLinkedTask(String type, int ownerId, int primaryTaskId,
-      int linkedTaskId, String relation) {
+  void addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
+      String relation, String type) {
     if (type == 'personal') {
       personalDataStore.addLinkedTask(
           ownerId, primaryTaskId, linkedTaskId, relation);
@@ -125,6 +123,234 @@ class TaskDataStoreProvider with ChangeNotifier {
     }
     fetchAllTasksForUser(ownerId);
     notifyListeners();
+  }
+
+  List<DropdownMenuItem<int>>? getTaskIdDropdownMenuItems(
+      int taskId, String type) {
+    if (type == 'personal') {
+      return personalDataStore.getTaskIdDropdownMenuItems(taskId);
+    } else if (type == 'shared') {
+      return sharedDataStore.getTaskIdDropdownMenuItems(taskId);
+    } else {
+      return [];
+    }
+  }
+
+  void getTaskImageStack(int selectedTaskId, int ownerId, String type) {
+    if (type == 'personal') {
+      personalDataStore.getTaskImageStack(selectedTaskId, ownerId);
+    } else if (type == 'shared') {
+      sharedDataStore.getTaskImageStack(selectedTaskId, ownerId);
+    }
+    fetchAllTasksForUser(ownerId);
+  }
+
+  getTaskDetails(int taskId, String type) {
+    if (type == 'personal') {
+      return personalDataStore.getTaskDetails(taskId);
+    } else if (type == 'shared') {
+      return sharedDataStore.getTaskDetails(taskId);
+    } else {
+      return null;
+    }
+  }
+
+  List<TaskLink?> currentlyLinkedTasks(type) {
+    if (type == 'personal') {
+      return personalDataStore.currentlyLinkedTasks;
+    } else if (type == 'shared') {
+      return sharedDataStore.currentlyLinkedTasks;
+    } else {
+      return [];
+    }
+  }
+
+  String serializeTaskObject(Task task) {
+    Map<String, dynamic> toMap() {
+      return {
+        'taskTitle': task.taskTitle,
+        'description': task.description,
+        'ownerId': task.ownerId,
+        'status': task.status,
+        'lastUpdate': task.lastUpdate,
+        'type': task.type,
+        'group': task.group,
+      };
+    }
+
+    String toJson() => json.encode(toMap());
+    return toJson();
+  }
+
+  QrPainter generateQRCode(String json) {
+    final qrCode = QrPainter(
+      data: json,
+      version: QrVersions.auto,
+      color: Colors.white,
+    );
+    // sleep(Duration(seconds: 5));
+    return qrCode;
+  }
+
+  saveQrCodetoAppDirectory(
+      int ownerId, int taskId, QrPainter image, String type) async {
+    //save to file
+    final qrCode = await image.toImageData(2000);
+    final bytes = Uint8List.view(qrCode!.buffer);
+    final directory = await getApplicationDocumentsDirectory();
+    var imageName = '${ownerId}_${taskId}_${type}_QrImage.jpg';
+    final newImage = File('${directory.path}/$imageName');
+    await newImage.writeAsBytes(bytes);
+
+    Share.shareFiles([newImage.path], text: imageName);
+  }
+
+  cards(type) {
+    if (type == 'personal') {
+      return personalDataStore.cards;
+    } else if (type == 'shared') {
+      return sharedDataStore.cards;
+    } else {
+      return [];
+    }
+  }
+
+  void updateSelectedTask(int ownerId, int selectedTaskId,
+      String selectedStatus, String type) async {
+    if (type == 'personal') {
+      personalDataStore.updateSelectedTask(
+          ownerId, selectedTaskId, selectedStatus);
+    } else if (type == 'shared') {
+      sharedDataStore.updateSelectedTask(
+          ownerId, selectedTaskId, selectedStatus);
+    }
+    fetchAllTasksForUser(ownerId);
+  }
+
+  Future<void> uploadPictureViaCamera(
+      int selectedTaskOwnerId, int selectedTaskId, String type) async {
+    final cameraStatus = await Permission.camera.request();
+
+    if (cameraStatus == PermissionStatus.granted) {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+      if (pickedFile == null) {
+        return;
+      }
+
+      //save to file
+      final directory = await getApplicationDocumentsDirectory();
+      var imageName =
+          '${selectedTaskOwnerId}_${selectedTaskId}_${type}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newImage = File('${directory.path}/$imageName');
+      await pickedFile.saveTo(newImage.path);
+
+      // //save to gallery
+      // final extDirectory = await getExternalStorageDirectory();
+      // final galleryDirectory = '${extDirectory!.path}/DCIM';
+      // final originalFile = File(pickedFile.path);
+      // final newFile = await originalFile.copy('$galleryDirectory/$imageName');
+      // await pickedFile.saveTo(newFile.path);
+
+      if (type == 'personal') {
+        await personalDataStore.saveImagePathtoDB(
+            TaskImage(
+                taskId: selectedTaskId,
+                ownerId: selectedTaskOwnerId,
+                imagePath: newImage.path,
+                uploadDate: DateTime.now().toString()),
+            selectedTaskId);
+      } else if (type == 'shared') {
+        //???? Write Firestore logic here
+      }
+
+      getTaskImageStack(selectedTaskId, selectedTaskOwnerId, type);
+    }
+  }
+
+  Future<void> uploadPictureViaStorage(
+      int selectedTaskOwnerId, int selectedTaskId, String type) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) {
+      return;
+    }
+
+    final directory = await getApplicationDocumentsDirectory();
+    var imageName =
+        '${selectedTaskOwnerId}_${selectedTaskId}_${type}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final newImage = File('${directory.path}/$imageName');
+    await pickedFile.saveTo(newImage.path);
+
+    if (type == 'personal') {
+      await personalDataStore.saveImagePathtoDB(
+          TaskImage(
+              taskId: selectedTaskId,
+              ownerId: selectedTaskOwnerId,
+              imagePath: newImage.path,
+              uploadDate: DateTime.now().toString()),
+          selectedTaskId);
+    } else if (type == 'shared') {
+      //???? Write firestore logic here
+    }
+    getTaskImageStack(selectedTaskId, selectedTaskOwnerId, type);
+  }
+
+  void clearLinkedTaskIds(String type) {
+    if (type == 'personal') {
+      personalDataStore.clearLinkedTaskIds();
+    } else if (type == 'shared') {
+      sharedDataStore.clearLinkedTaskIds();
+    }
+  }
+
+  void getCurrentlyLinkedTasks(int linkedTaskId, String type) {
+    if (type == 'personal') {
+      personalDataStore.getCurrentlyLinkedTasks(linkedTaskId);
+    } else if (type == 'shared') {
+      sharedDataStore.getCurrentlyLinkedTasks(linkedTaskId);
+    }
+  }
+
+  void removeLinkedTask(
+      int ownerId, int linkedTaskId, int selectedTaskId, String type) {
+    if (type == 'personal') {
+      personalDataStore.removeLinkedTask(ownerId, linkedTaskId, selectedTaskId);
+    } else if (type == 'shared') {
+      sharedDataStore.removeLinkedTask(ownerId, linkedTaskId, selectedTaskId);
+    }
+    fetchAllTasksForUser(ownerId);
+  }
+
+  List<Group> groups() {
+    return sharedDataStore.groups;
+  }
+
+  List<String>? userGroupNames() {
+    return personalDataStore.userGroupNames;
+  }
+
+  void deleteTask(int ownerId, int taskId, String type) {
+    if (type == 'personal') {
+      personalDataStore.deleteTask(ownerId, taskId);
+    } else if (type == 'shared') {
+      sharedDataStore.deleteTask(ownerId, taskId);
+    }
+    fetchAllTasksForUser(ownerId);
+  }
+
+  List<DropdownMenuItem<String>>? getUserGroupDropdownMenuItems(int ownerId) {
+    return personalDataStore.getUserGroupDropdownMenuItems(ownerId);
+  }
+
+  List<TaskLink?> linkedTasks(String type) {
+    if (type == 'personal') {
+      return personalDataStore.linkedTasks;
+    } else if (type == 'shared') {
+      return sharedDataStore.linkedTasks;
+    } else {
+      return [];
+    }
   }
 }
 
@@ -149,25 +375,17 @@ abstract class TaskDataStore {
 
   void addTask(Task task, List<TaskLink?> linkedTasks);
 
-  void deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser);
+  Future<void> deleteTask(int ownerId, int taskId);
 
-  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
-      Function fetchAllTasksForUser);
+  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId);
 
   Future<void> addLinkedTask(
       int ownerId, int primaryTaskId, int linkedTaskId, String relation);
 
-  void getTaskImageStack(
-      int selectedTaskId, int ownerId, Function fetchAllTasksForUser);
+  Future<void> getTaskImageStack(int selectedTaskId, int ownerId);
 
-  String serializeTaskObject(Task task);
-
-  generateQRCode(String json);
-
-  saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image);
-
-  void updateSelectedTask(int ownerId, int selectedTaskId,
-      String selectedStatus, Function fetchAllTasksForUser);
+  Future<void> updateSelectedTask(
+      int ownerId, int selectedTaskId, String selectedStatus);
 
   void clearLinkedTasks();
 
@@ -179,7 +397,7 @@ abstract class TaskDataStore {
 
   void clearLinkedTaskIds();
 
-  void getCurrentlyLinkedTasks(int taskId);
+  Future<void> getCurrentlyLinkedTasks(int taskId);
 
   List<DropdownMenuItem<String>>? getUserGroupDropdownMenuItems(int ownerId);
 
@@ -192,6 +410,8 @@ abstract class TaskDataStore {
   Future<void> removeGroupFromUserGroups(int id, int userId);
 
   Future<void> addGroup(Group groupObject);
+
+  saveImagePathtoDB(TaskImage taskImage, int selectedTaskId);
 }
 
 //single resp : translate use cases t firestore interactions
@@ -202,13 +422,18 @@ class FirestoreTaskDataStore extends TaskDataStore {
   final FirebaseFirestore _firestore;
   FirestoreTaskDataStore({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  List<Task>? sharedTasks;
+
   @override
   Future<List<Task>> getTasksForUser(int ownerId) async {
     final tasks = await FirebaseFirestore.instance
         .collection('task')
         .where('ownerId', isEqualTo: ownerId)
         .get();
-    return tasks.docs.map((doc) => Task.fromJson(doc)).toList();
+    var sharedTasksList = tasks.docs.map((doc) => Task.fromJson(doc)).toList();
+    if (sharedTasksList.isNotEmpty) sharedTasks = sharedTasksList;
+    return sharedTasksList;
 
 //it returns docs which are map of string dynamic. .it returns snapshot of data() because there is a metadata inside .doc
 //exists is useful with query by id and returns if it found something or not
@@ -265,20 +490,89 @@ class FirestoreTaskDataStore extends TaskDataStore {
   List<TaskLink?> currentlyLinkedTasks = [];
 
   @override
-  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
-      Function fetchAllTasksForUser) {
+  void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) {
     // TODO: implement removeLinkedTask
+  }
+
+  bool checkIsNewTask(int taskId) {
+    bool isNewTask;
+    var task = sharedTasks!.where((element) => element.id == taskId).toList();
+    if (task.isNotEmpty) {
+      isNewTask = false;
+    } else {
+      isNewTask = true;
+    }
+    return isNewTask;
   }
 
   @override
   Future<void> addLinkedTask(
       int ownerId, int primaryTaskId, int linkedTaskId, String relation) async {
-    // TODO: implement addLinkedTask
+    bool isNewTask = checkIsNewTask(primaryTaskId);
+    if (!isNewTask) {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('task')
+          .where('id', isEqualTo: primaryTaskId)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        String docId = querySnapshot.docs.first.id;
+        DocumentReference documentReference =
+            FirebaseFirestore.instance.collection('task').doc(docId);
+
+        //update linked task
+        await documentReference.update({
+          'taskLinks': FieldValue.arrayUnion([
+            {
+              'id': UniqueKey().hashCode,
+              'relation': relation,
+              'taskId': primaryTaskId,
+              'linkedTaskId': linkedTaskId,
+              'lastUpdate': DateTime.now().toString(),
+            }
+          ]),
+          'lastUpdate': DateTime.now().toString(),
+        }).then((value) {
+          debugPrint('Update successful');
+        }).catchError((error) {
+          debugPrint('Update failed: $error');
+        });
+      }
+
+      getCurrentlyLinkedTasks(primaryTaskId);
+    } else {
+      linkedTasks.add(TaskLink(
+          taskId: 9999,
+          relation: relation,
+          linkedTaskId: linkedTaskId,
+          lastUpdate: DateTime.now().toString()));
+    }
   }
 
   @override
-  void getTaskImageStack(
-      int selectedTaskId, int ownerId, Function fetchAllTasksForUser) {
+  Future<void> getCurrentlyLinkedTasks(int taskId) async {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('task')
+        .where('id', isEqualTo: taskId)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      String docId = querySnapshot.docs.first.id;
+
+      final DocumentSnapshot snapshot =
+          await FirebaseFirestore.instance.collection('task').doc(docId).get();
+
+      final taskLinksMap = Map<String, dynamic>.from(snapshot.get('taskLinks'));
+      final taskLinksList = taskLinksMap.entries.toList();
+      //???? do the taskLinksList conversion to currentlyLinkedTasks
+    }
+
+    currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
+    // notifyListeners();
+  }
+
+  @override
+  Future<void> getTaskImageStack(int selectedTaskId, int ownerId) async {
     // TODO: implement getTaskImageStack
   }
 
@@ -290,26 +584,8 @@ class FirestoreTaskDataStore extends TaskDataStore {
   List<TaskImageStack> get cards => _cards.toList();
 
   @override
-  String serializeTaskObject(Task task) {
-    // TODO: implement serializeTaskObject
-    throw UnimplementedError();
-  }
-
-  @override
-  generateQRCode(String json) {
-    // TODO: implement generateQRCode
-    throw UnimplementedError();
-  }
-
-  @override
-  saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image) {
-    // TODO: implement saveQrCodetoAppDirectory
-    throw UnimplementedError();
-  }
-
-  @override
-  void updateSelectedTask(int ownerId, int selectedTaskId,
-      String selectedStatus, Function fetchAllTasksForUser) {
+  Future<void> updateSelectedTask(
+      int ownerId, int selectedTaskId, String selectedStatus) async {
     // TODO: implement updateSelectedTask
   }
 
@@ -338,12 +614,7 @@ class FirestoreTaskDataStore extends TaskDataStore {
   }
 
   @override
-  void getCurrentlyLinkedTasks(int taskId) {
-    // TODO: implement getCurrentlyLinkedTasks
-  }
-
-  @override
-  deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser) {
+  Future<void> deleteTask(int ownerId, int taskId) async {
     // TODO: implement deleteTask
     throw UnimplementedError();
   }
@@ -389,6 +660,12 @@ class FirestoreTaskDataStore extends TaskDataStore {
 
     await FirebaseFirestore.instance.collection("group").add(dataToSave);
   }
+
+  @override
+  saveImagePathtoDB(TaskImage taskImage, int selectedTaskId) {
+    // TODO: implement saveImagePathtoDB
+    throw UnimplementedError();
+  }
 }
 
 //single responsibility: Translate use cases to SQflite as a local datastore
@@ -428,14 +705,12 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   }
 
   @override
-  deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser) async {
+  Future<void> deleteTask(int ownerId, int taskId) async {
     personalTasks!.removeWhere((element) => element.id == taskId);
     await _database.taskImageDao.deleteLinkedImagesForDeletedTask(taskId);
     await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
     await _database.taskDao.deleteTask(taskId);
-    fetchAllTasksForUser(ownerId);
     getCurrentlyLinkedTasks(taskId);
-    // notifyListeners();
   }
 
   //Dropdown Menu Task Ids to link tasks
@@ -526,8 +801,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   }
 
   @override
-  removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
-      Function fetchAllTasksForUser) async {
+  removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId) async {
     bool isNewTask = checkIsNewTask(primaryTaskId);
     if (!isNewTask) {
       //delete linked task from linked tasks table
@@ -535,14 +809,12 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
       //update date/time in main task table
       await _database.taskDao
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
-      fetchAllTasksForUser(ownerId);
       linkedTaskIds.remove(linkedTaskId);
       getCurrentlyLinkedTasks(primaryTaskId);
     } else {
       linkedTasks
           .removeWhere((element) => element!.linkedTaskId == linkedTaskId);
       linkedTaskIds.remove(linkedTaskId);
-      fetchAllTasksForUser(ownerId);
     }
     // notifyListeners();
   }
@@ -571,19 +843,17 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   }
 
   @override
-  void getCurrentlyLinkedTasks(int taskId) async {
+  Future<void> getCurrentlyLinkedTasks(int taskId) async {
     currentlyLinkedTasks =
         await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
     currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
-    // notifyListeners();
   }
 
   @override
-  updateSelectedTask(int ownerId, int selectedTaskId, String selectedStatus,
-      Function fetchAllTasksForUser) async {
+  Future<void> updateSelectedTask(
+      int ownerId, int selectedTaskId, String selectedStatus) async {
     await _database.taskDao.updateTaskStatusAndTime(
         selectedTaskId, selectedStatus, DateTime.now().toString());
-    fetchAllTasksForUser(ownerId);
     clearLinkedTasks();
     // notifyListeners();
   }
@@ -598,8 +868,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   List<TaskImageStack> get cards => _cards.toList();
 
   @override
-  getTaskImageStack(
-      int selectedTaskId, int ownerId, Function fetchAllTasksForUser) async {
+  Future<void> getTaskImageStack(int selectedTaskId, int ownerId) async {
     _taskImages = await _database.taskImageDao
         .getExistingTaskImagesByTaskId(selectedTaskId);
     _cards = _taskImages
@@ -607,8 +876,6 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
               taskImage: image,
             ))
         .toList();
-    fetchAllTasksForUser(ownerId);
-    // notifyListeners();
   }
 
   @override
@@ -645,10 +912,17 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
       await _database.taskDao
           .updateTaskWithCurrentTime(selectedTaskId, DateTime.now().toString());
 
-      getTaskImageStack(
-          selectedTaskId, selectedTaskOwnerId, fetchAllTasksForUser);
+      getTaskImageStack(selectedTaskId, selectedTaskOwnerId);
       // notifyListeners();
     }
+  }
+
+  @override
+  Future<void> saveImagePathtoDB(
+      TaskImage taskImage, int selectedTaskId) async {
+    await _database.taskImageDao.insertTaskImage(taskImage);
+    await _database.taskDao
+        .updateTaskWithCurrentTime(selectedTaskId, DateTime.now().toString());
   }
 
   @override
@@ -673,49 +947,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
     await _database.taskDao
         .updateTaskWithCurrentTime(selectedTaskId, DateTime.now().toString());
 
-    getTaskImageStack(
-        selectedTaskId, selectedTaskOwnerId, fetchAllTasksForUser);
+    getTaskImageStack(selectedTaskId, selectedTaskOwnerId);
     // notifyListeners();
-  }
-
-  @override
-  String serializeTaskObject(Task task) {
-    Map<String, dynamic> toMap() {
-      return {
-        'taskTitle': task.taskTitle,
-        'description': task.description,
-        'ownerId': task.ownerId,
-        'status': task.status,
-        'lastUpdate': task.lastUpdate,
-      };
-    }
-
-    String toJson() => json.encode(toMap());
-    return toJson();
-  }
-
-  @override
-  QrPainter generateQRCode(String json) {
-    final qrCode = QrPainter(
-      data: json,
-      version: QrVersions.auto,
-      color: Colors.white,
-    );
-    // sleep(Duration(seconds: 5));
-    return qrCode;
-  }
-
-  @override
-  saveQrCodetoAppDirectory(int ownerId, int taskId, QrPainter image) async {
-    //save to file
-    final qrCode = await image.toImageData(2000);
-    final bytes = Uint8List.view(qrCode!.buffer);
-    final directory = await getApplicationDocumentsDirectory();
-    var imageName = '${ownerId}_${taskId}_QrImage.jpg';
-    final newImage = File('${directory.path}/$imageName');
-    await newImage.writeAsBytes(bytes);
-
-    Share.shareFiles([newImage.path], text: imageName);
   }
 
   List<String> _userGroupNames = [];

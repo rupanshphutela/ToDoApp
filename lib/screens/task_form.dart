@@ -7,7 +7,6 @@ import 'package:to_do_app/models/task_link.dart';
 import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
-const List<String> types = ['personal', 'shared'];
 const List<String> labels = [
   'is subtask of',
   'is blocked by',
@@ -17,8 +16,9 @@ const List<String> labels = [
 ];
 
 class TaskForm extends StatelessWidget {
-  TaskForm({super.key, required this.title});
+  TaskForm({super.key, required this.title, required this.type});
   final String title;
+  final String type;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -27,7 +27,6 @@ class TaskForm extends StatelessWidget {
   final TextEditingController _statusController = TextEditingController();
   final TextEditingController _labelController = TextEditingController();
   final TextEditingController _taskIdController = TextEditingController();
-  final TextEditingController _typeController = TextEditingController();
   final TextEditingController _groupController = TextEditingController();
 
   @override
@@ -38,12 +37,12 @@ class TaskForm extends StatelessWidget {
     bool isDeleteLink = false;
     final provider = Provider.of<TaskDataStoreProvider>(context);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
-        provider.personalDataStore.getTaskIdDropdownMenuItems(taskId);
+        provider.getTaskIdDropdownMenuItems(taskId, type);
 
     List<DropdownMenuItem<String>>? userGroupDropdownMenuItems =
-        provider.personalDataStore.getUserGroupDropdownMenuItems(ownerId);
-    List<String> userGroupNames = provider.personalDataStore.userGroupNames;
-    List<TaskLink?> linkedTasks = provider.personalDataStore.linkedTasks;
+        provider.getUserGroupDropdownMenuItems(ownerId);
+    List<String>? userGroupNames = provider.userGroupNames();
+    List<TaskLink?> linkedTasks = provider.linkedTasks(type);
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -133,25 +132,16 @@ class TaskForm extends StatelessWidget {
                             children: <Widget>[
                               Flexible(
                                 child: DropdownButtonFormField(
-                                  value: _typeController.text.isNotEmpty
-                                      ? _typeController.text
-                                      : types[0],
+                                  value: type,
                                   validator: (value) {
                                     if (value == null) {
                                       return 'No value selected';
                                     }
                                     return null;
                                   },
-                                  onChanged: (typeValue) {
-                                    _typeController.text = typeValue.toString();
-                                    if (typeValue == 'shared') {
-                                      provider.enableGroupsDropdown();
-                                    } else {
-                                      provider.disableGroupsDropdown();
-                                    }
-                                  },
+                                  onChanged: null,
                                   isExpanded: true,
-                                  items: types
+                                  items: [type]
                                       .map(((typeValue) => DropdownMenuItem(
                                             value: typeValue,
                                             child: Text(typeValue,
@@ -245,7 +235,7 @@ class TaskForm extends StatelessWidget {
                                                   .getCurrentlyLinkedTasks(
                                                       linkedTaskId); // ???? move this to tasks edit page
                                               context.push(
-                                                  '/taskdetail?task_id=$linkedTaskId');
+                                                  '/taskdetail?taskId=$linkedTaskId');
                                             },
                                           ),
                                         ),
@@ -256,13 +246,8 @@ class TaskForm extends StatelessWidget {
                                             onPressed: () {
                                               isDeleteLink = true;
 
-                                              provider.personalDataStore
-                                                  .removeLinkedTask(
-                                                      ownerId,
-                                                      linkedTaskId,
-                                                      taskId,
-                                                      provider
-                                                          .fetchAllTasksForUser);
+                                              provider.removeLinkedTask(ownerId,
+                                                  linkedTaskId, taskId, type);
                                               if (isDeleteLink) {
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(SnackBar(
@@ -371,13 +356,11 @@ class TaskForm extends StatelessWidget {
                                           } else {
                                             addLink = true;
                                             provider.addLinkedTask(
-                                                _typeController.text.isNotEmpty
-                                                    ? _typeController.text
-                                                    : types[0],
                                                 ownerId,
                                                 taskId,
                                                 taskIdControllerInt,
-                                                _labelController.text);
+                                                _labelController.text,
+                                                type);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -393,13 +376,11 @@ class TaskForm extends StatelessWidget {
                                             element!.relation == labels[0])) {
                                           addLink = true;
                                           provider.addLinkedTask(
-                                              _typeController.text.isNotEmpty
-                                                  ? _typeController.text
-                                                  : types[0],
                                               ownerId,
                                               taskId,
                                               taskIdControllerInt,
-                                              labels[0]);
+                                              labels[0],
+                                              type);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -411,7 +392,7 @@ class TaskForm extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.personalDataStore.getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.getTaskDetails(taskIdControllerInt, type)!.taskTitle}" added')));
                                       }
                                     },
                                   ),
@@ -448,14 +429,14 @@ class TaskForm extends StatelessWidget {
                                     ? _statusController.text
                                     : statuses[0],
                                 lastUpdate: DateTime.now().toString(),
-                                group: _typeController.text == 'shared'
+                                group: type == 'shared'
                                     ? _groupController.text.isEmpty
-                                        ? userGroupNames[0]
+                                        ? userGroupNames!.isNotEmpty
+                                            ? userGroupNames[0]
+                                            : "N/A"
                                         : _groupController.text
                                     : "",
-                                type: _typeController.text.isNotEmpty
-                                    ? _typeController.text
-                                    : types[0]),
+                                type: type),
                             linkedTasks);
                         context.pop();
                       }

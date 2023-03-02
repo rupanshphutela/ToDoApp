@@ -16,9 +16,14 @@ const List<String> labels = [
 ];
 
 class TaskDetails extends StatelessWidget {
-  TaskDetails({super.key, required this.selectedTaskId, required this.title});
+  TaskDetails(
+      {super.key,
+      required this.selectedTaskId,
+      required this.title,
+      required this.type});
   final int selectedTaskId;
   final String title;
+  final String type;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _statusController = TextEditingController();
@@ -31,17 +36,15 @@ class TaskDetails extends StatelessWidget {
     int ownerId = 0; //???? dont you hardcode ownerId
     final provider = Provider.of<TaskDataStoreProvider>(context);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
-        provider.personalDataStore.getTaskIdDropdownMenuItems(selectedTaskId);
-    provider.personalDataStore.getTaskImageStack(
-        selectedTaskId, ownerId, provider.fetchAllTasksForUser);
+        provider.getTaskIdDropdownMenuItems(selectedTaskId, type);
+
+    provider.getTaskImageStack(selectedTaskId, ownerId, type);
 
     bool addLink = false;
     bool isDeleteLink = false;
-    final selectedTask =
-        provider.personalDataStore.getTaskDetails(selectedTaskId);
+    final selectedTask = provider.getTaskDetails(selectedTaskId, type);
     _statusController.text = selectedTask.status;
-    List<TaskLink?> currentlyLinkedTasks =
-        provider.personalDataStore.currentlyLinkedTasks;
+    List<TaskLink?> currentlyLinkedTasks = provider.currentlyLinkedTasks(type);
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -58,12 +61,10 @@ class TaskDetails extends StatelessWidget {
                   backgroundColor:
                       MaterialStateProperty.all(const Color(0xff764abc))),
               onPressed: () {
-                var json = provider.personalDataStore
-                    .serializeTaskObject(selectedTask);
-                var qrPainterImage =
-                    provider.personalDataStore.generateQRCode(json);
-                provider.personalDataStore.saveQrCodetoAppDirectory(
-                    ownerId, selectedTaskId, qrPainterImage);
+                var json = provider.serializeTaskObject(selectedTask);
+                var qrPainterImage = provider.generateQRCode(json);
+                provider.saveQrCodetoAppDirectory(
+                    ownerId, selectedTaskId, qrPainterImage, type);
               },
               child: Row(
                 children: [
@@ -80,8 +81,7 @@ class TaskDetails extends StatelessWidget {
         physics: const ScrollPhysics(),
         child: Column(
           children: [
-            /** ???? Image Stack */
-            if (provider.personalDataStore.cards.isNotEmpty)
+            if (provider.cards(type).isNotEmpty)
               SafeArea(
                 child: Column(
                   children: [
@@ -93,14 +93,13 @@ class TaskDetails extends StatelessWidget {
                       width: size.width,
                       child: CardSwiper(
                         scale: 0.0001,
-                        cards: provider.personalDataStore.cards,
+                        cards: provider.cards(type),
                         padding: const EdgeInsets.all(24.0),
                       ),
                     ),
                   ],
                 ),
               ),
-            /** ???? Image Stack */
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14.0),
               child: Form(
@@ -142,11 +141,8 @@ class TaskDetails extends StatelessWidget {
                             ? _statusController.text
                             : selectedTask.status.toString();
                         if (_formKey.currentState!.validate()) {
-                          provider.personalDataStore.updateSelectedTask(
-                              ownerId,
-                              selectedTaskId,
-                              selectedStatus,
-                              provider.fetchAllTasksForUser);
+                          provider.updateSelectedTask(
+                              ownerId, selectedTaskId, selectedStatus, type);
                         }
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(
@@ -162,7 +158,7 @@ class TaskDetails extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 15),
                       child: Text(
-                        'Task ID: ${selectedTask.id}, \nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
+                        'Task ID: ${selectedTask.id}, \nTask Type: $type\nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ),
@@ -186,11 +182,8 @@ class TaskDetails extends StatelessWidget {
                             Flexible(
                               child: ElevatedButton(
                                 onPressed: () {
-                                  provider.personalDataStore
-                                      .uploadPictureViaCamera(
-                                          ownerId,
-                                          selectedTaskId,
-                                          provider.fetchAllTasksForUser);
+                                  provider.uploadPictureViaCamera(
+                                      ownerId, selectedTaskId, type);
                                 },
                                 child: const Text('Take photo'),
                               ),
@@ -201,11 +194,8 @@ class TaskDetails extends StatelessWidget {
                             Flexible(
                               child: ElevatedButton(
                                 onPressed: () {
-                                  provider.personalDataStore
-                                      .uploadPictureViaStorage(
-                                          ownerId,
-                                          selectedTaskId,
-                                          provider.fetchAllTasksForUser);
+                                  provider.uploadPictureViaStorage(
+                                      ownerId, selectedTaskId, type);
                                 },
                                 child: const Text('Upload photo'),
                               ),
@@ -241,8 +231,8 @@ class TaskDetails extends StatelessWidget {
                           itemBuilder: (context, index) {
                             int linkedTaskId =
                                 currentlyLinkedTasks[index]!.linkedTaskId;
-                            String taskTitle = provider.personalDataStore
-                                .getTaskDetails(linkedTaskId)!
+                            String taskTitle = provider
+                                .getTaskDetails(linkedTaskId, type)!
                                 .taskTitle;
                             return ListTile(
                               isThreeLine: true,
@@ -268,13 +258,12 @@ class TaskDetails extends StatelessWidget {
                                     child: IconButton(
                                       icon: const Icon(Icons.edit),
                                       onPressed: () {
-                                        provider.personalDataStore
-                                            .clearLinkedTaskIds();
-                                        provider.personalDataStore
-                                            .getCurrentlyLinkedTasks(
-                                                linkedTaskId); // ???? move this to tasks edit page
+                                        provider.clearLinkedTaskIds(type);
+                                        provider.getCurrentlyLinkedTasks(
+                                            linkedTaskId,
+                                            type); // ???? move this to tasks edit page
                                         context.push(
-                                            '/taskdetail?task_id=$linkedTaskId');
+                                            '/taskdetail?taskId=$linkedTaskId&type=$type');
                                       },
                                     ),
                                   ),
@@ -285,12 +274,8 @@ class TaskDetails extends StatelessWidget {
                                       icon: const Icon(Icons.delete),
                                       onPressed: () {
                                         isDeleteLink = true;
-                                        provider.personalDataStore
-                                            .removeLinkedTask(
-                                                ownerId,
-                                                linkedTaskId,
-                                                selectedTaskId,
-                                                provider.fetchAllTasksForUser);
+                                        provider.removeLinkedTask(ownerId,
+                                            linkedTaskId, selectedTaskId, type);
                                         if (isDeleteLink) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -408,13 +393,12 @@ class TaskDetails extends StatelessWidget {
                                                         'Task ID "$taskIdControllerInt" already linked to this task. Please remove and retry')));
                                           } else {
                                             addLink = true;
-                                            provider.personalDataStore
-                                                .addLinkedTask(
-                                              ownerId,
-                                              selectedTaskId,
-                                              taskIdControllerInt,
-                                              _labelController.text,
-                                            );
+                                            provider.addLinkedTask(
+                                                ownerId,
+                                                selectedTaskId,
+                                                taskIdControllerInt,
+                                                _labelController.text,
+                                                type);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -431,13 +415,12 @@ class TaskDetails extends StatelessWidget {
                                                 element!.relation ==
                                                 labels[0])) {
                                           addLink = true;
-                                          provider.personalDataStore
-                                              .addLinkedTask(
-                                            ownerId,
-                                            selectedTaskId,
-                                            taskIdControllerInt,
-                                            labels[0],
-                                          );
+                                          provider.addLinkedTask(
+                                              ownerId,
+                                              selectedTaskId,
+                                              taskIdControllerInt,
+                                              labels[0],
+                                              type);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -449,7 +432,7 @@ class TaskDetails extends StatelessWidget {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(SnackBar(
                                                 content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.personalDataStore.getTaskDetails(taskIdControllerInt)!.taskTitle}" added')));
+                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.getTaskDetails(taskIdControllerInt, type)!.taskTitle}" added')));
                                       }
                                     },
                                   ),
