@@ -410,12 +410,11 @@ class TaskDetails extends StatelessWidget {
                                             addLink = true;
                                             provider.personalDataStore
                                                 .addLinkedTask(
-                                                    ownerId,
-                                                    selectedTaskId,
-                                                    taskIdControllerInt,
-                                                    _labelController.text,
-                                                    provider
-                                                        .fetchAllTasksForUser);
+                                              ownerId,
+                                              selectedTaskId,
+                                              taskIdControllerInt,
+                                              _labelController.text,
+                                            );
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -434,12 +433,11 @@ class TaskDetails extends StatelessWidget {
                                           addLink = true;
                                           provider.personalDataStore
                                               .addLinkedTask(
-                                                  ownerId,
-                                                  selectedTaskId,
-                                                  taskIdControllerInt,
-                                                  labels[0],
-                                                  provider
-                                                      .fetchAllTasksForUser);
+                                            ownerId,
+                                            selectedTaskId,
+                                            taskIdControllerInt,
+                                            labels[0],
+                                          );
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(

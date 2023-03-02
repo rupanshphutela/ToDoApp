@@ -10,6 +10,8 @@ class Task {
   String description;
   String status;
   String lastUpdate;
+  String type;
+  String? group;
 
   Task({
     this.id,
@@ -18,7 +20,22 @@ class Task {
     required this.description,
     required this.status,
     required this.lastUpdate,
+    required this.type,
+    this.group,
   });
+
+  toJson(Task task) {
+    return {
+      "id": task.id,
+      "ownerId": task.ownerId,
+      "taskTitle": task.taskTitle,
+      "description": task.description,
+      "status": task.status,
+      "lastUpdate": task.lastUpdate,
+      "type": task.type,
+      "group": task.group,
+    };
+  }
 
   static Task fromJson(QueryDocumentSnapshot data) {
     return Task(
@@ -28,6 +45,8 @@ class Task {
       status: data['status'],
       ownerId: data['ownerId'],
       lastUpdate: data['lastUpdate'],
+      type: data['type'],
+      group: data['group'],
     );
   }
 }

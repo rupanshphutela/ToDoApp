@@ -30,24 +30,28 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
             data.containsKey('description') &&
             data.containsKey('ownerId') &&
             data.containsKey('status') &&
-            data.containsKey('lastUpdate')) {
+            data.containsKey('lastUpdate') &&
+            data.containsKey('type') &&
+            data.containsKey('group')) {
           if (data['taskTitle'] != "" &&
               data['description'] != "" &&
               data['status'] != "" &&
               data['ownerId'] != "" &&
               data['ownerId'] is int &&
-              data['lastUpdate'] != "") {
+              data['lastUpdate'] != "" &&
+              data['type'] != "") {
             var provider =
                 Provider.of<TaskDataStoreProvider>(context, listen: false);
-            provider.personalDataStore.addTask(
+            provider.addTask(
                 Task(
                     ownerId: data['ownerId'],
                     taskTitle: data['taskTitle'],
                     description: data['description'],
                     status: data['status'],
-                    lastUpdate: data['lastUpdate']),
-                [],
-                provider.fetchAllTasksForUser);
+                    lastUpdate: data['lastUpdate'],
+                    type: data['type'],
+                    group: data['group']),
+                []);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(
                     'TaskId with title "${data['taskTitle']}" successfully inserted via QR Code scan')));

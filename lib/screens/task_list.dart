@@ -95,7 +95,9 @@ class TaskList extends StatelessWidget {
                 onChanged: (value) {
                   _statusFilterController.text = value.toString();
 
-                  context.push('/tasks?state=$value');
+                  context.push(
+                    '/tasks?state=$value',
+                  );
                 },
               ),
               Center(
@@ -156,12 +158,21 @@ class TaskList extends StatelessWidget {
                 icon: Icon(Icons.home), label: 'Home', tooltip: 'Home'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.add), label: 'Add Task', tooltip: 'Add Task'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.group),
+                label: 'Shared Groups',
+                tooltip: 'Shared Groups'),
           ],
           onTap: (index) {
             var route = ModalRoute.of(context);
             if (route?.settings.name == '/tasks' && index == 0) {
-            } else {
-              context.push(routes[index].path);
+            } else if (index == 1) {
+              provider.disableGroupsDropdown();
+              provider.getUserGroups(ownerId);
+              context.push('/task');
+            } else if (index == 2) {
+              provider.getAllGroups();
+              context.push('/groups?ownerId=$ownerId');
             }
           },
         ),
@@ -210,12 +221,21 @@ class TaskList extends StatelessWidget {
                 icon: Icon(Icons.home), label: 'Home', tooltip: 'Home'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.add), label: 'Add Task', tooltip: 'Add Task'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.group),
+                label: 'Shared Groups',
+                tooltip: 'Shared Groups'),
           ],
           onTap: (index) {
             var route = ModalRoute.of(context);
             if (route?.settings.name == '/tasks' && index == 0) {
-            } else {
-              context.push(routes[index].path);
+            } else if (index == 1) {
+              provider.disableGroupsDropdown();
+              provider.getUserGroups(ownerId);
+              context.push('/task');
+            } else if (index == 2) {
+              provider.getAllGroups();
+              context.push('/groups?ownerId=$ownerId');
             }
           },
         ),

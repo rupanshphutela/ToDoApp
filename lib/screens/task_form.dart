@@ -7,6 +7,7 @@ import 'package:to_do_app/models/task_link.dart';
 import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 const List<String> statuses = ['open', 'in progress', 'complete'];
+const List<String> types = ['personal', 'shared'];
 const List<String> labels = [
   'is subtask of',
   'is blocked by',
@@ -26,6 +27,8 @@ class TaskForm extends StatelessWidget {
   final TextEditingController _statusController = TextEditingController();
   final TextEditingController _labelController = TextEditingController();
   final TextEditingController _taskIdController = TextEditingController();
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _groupController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +39,10 @@ class TaskForm extends StatelessWidget {
     final provider = Provider.of<TaskDataStoreProvider>(context);
     List<DropdownMenuItem<int>>? taskIdDropdownMenuItems =
         provider.personalDataStore.getTaskIdDropdownMenuItems(taskId);
+
+    List<DropdownMenuItem<String>>? userGroupDropdownMenuItems =
+        provider.personalDataStore.getUserGroupDropdownMenuItems(ownerId);
+    List<String> userGroupNames = provider.personalDataStore.userGroupNames;
     List<TaskLink?> linkedTasks = provider.personalDataStore.linkedTasks;
     return Scaffold(
       appBar: AppBar(
@@ -112,108 +119,171 @@ class TaskForm extends StatelessWidget {
                         _statusController.text = value as String;
                       },
                     ),
-                    if (context
-                        .read<TaskDataStoreProvider>()
-                        .checkLinksEnablementAddForm)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 15),
-                        child: Text(
-                          'Links',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontStyle: FontStyle.italic),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    SingleChildScrollView(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(22),
-                          backgroundBlendMode: BlendMode.overlay,
-                          color: Colors.white38,
-                        ),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: linkedTasks.length,
-                          itemBuilder: (context, index) {
-                            int linkedTaskId = linkedTasks[index]!.linkedTaskId;
-                            String taskTitle = provider.personalDataStore
-                                .getTaskDetails(linkedTaskId)!
-                                .taskTitle;
-                            return ListTile(
-                              isThreeLine: true,
-                              leading: const CircleAvatar(
-                                backgroundColor: Colors.indigo,
-                                child: Icon(Icons.circle),
-                              ),
-                              subtitle: InkWell(
-                                child: Text(
-                                  '$linkedTaskId: $taskTitle',
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ),
-                              trailing: Wrap(
-                                spacing: 12,
-                                children: <Widget>[
-                                  CircleAvatar(
-                                    backgroundColor: Colors.brown,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () {
-                                        provider.personalDataStore
-                                            .clearLinkedTaskIds(); // ???? move this to tasks edit page
-                                        provider.personalDataStore
-                                            .getCurrentlyLinkedTasks(
-                                                linkedTaskId); // ???? move this to tasks edit page
-                                        context.push(
-                                            '/taskdetail?task_id=$linkedTaskId');
-                                      },
-                                    ),
-                                  ),
-                                  CircleAvatar(
-                                    backgroundColor: Colors.brown,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () {
-                                        isDeleteLink = true;
-
-                                        provider.personalDataStore
-                                            .removeLinkedTask(
-                                                ownerId,
-                                                linkedTaskId,
-                                                taskId,
-                                                provider.fetchAllTasksForUser);
-                                        if (isDeleteLink) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
-                                                  content: Text(
-                                                      'Link to taskId "$linkedTaskId" with title "$taskTitle" removed')));
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              title: Text(
-                                linkedTasks[index]!.relation,
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 10),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
                     Visibility(
                       visible: context
                           .read<TaskDataStoreProvider>()
                           .checkLinksEnablementAddForm,
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: <Widget>[
+                              Flexible(
+                                child: DropdownButtonFormField(
+                                  value: _typeController.text.isNotEmpty
+                                      ? _typeController.text
+                                      : types[0],
+                                  validator: (value) {
+                                    if (value == null) {
+                                      return 'No value selected';
+                                    }
+                                    return null;
+                                  },
+                                  onChanged: (typeValue) {
+                                    _typeController.text = typeValue.toString();
+                                    if (typeValue == 'shared') {
+                                      provider.enableGroupsDropdown();
+                                    } else {
+                                      provider.disableGroupsDropdown();
+                                    }
+                                  },
+                                  isExpanded: true,
+                                  items: types
+                                      .map(((typeValue) => DropdownMenuItem(
+                                            value: typeValue,
+                                            child: Text(typeValue,
+                                                overflow:
+                                                    TextOverflow.ellipsis),
+                                          )))
+                                      .toList(),
+                                ),
+                              ),
+                              SizedBox(
+                                  width: (MediaQuery.of(context).size.width) *
+                                      0.02),
+                              if (provider.enableGroupsinTasksForm)
+                                Flexible(
+                                  child: DropdownButtonFormField(
+                                    value: _groupController.text.isNotEmpty
+                                        ? _groupController.text
+                                        : null,
+                                    isExpanded: true,
+                                    items: userGroupDropdownMenuItems,
+                                    onChanged: (groupValue) {
+                                      _groupController.text =
+                                          groupValue.toString();
+                                    },
+                                    // validator: (value) {
+                                    //   if (value == null) {
+                                    //     return 'No value selected';
+                                    //   }
+                                    //   return null;
+                                    // },
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (context
+                              .read<TaskDataStoreProvider>()
+                              .checkLinksEnablementAddForm)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 15),
+                              child: Text(
+                                'Links',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontStyle: FontStyle.italic),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          SingleChildScrollView(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(22),
+                                backgroundBlendMode: BlendMode.overlay,
+                                color: Colors.white38,
+                              ),
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: linkedTasks.length,
+                                itemBuilder: (context, index) {
+                                  int linkedTaskId =
+                                      linkedTasks[index]!.linkedTaskId;
+                                  String taskTitle = provider.personalDataStore
+                                      .getTaskDetails(linkedTaskId)!
+                                      .taskTitle;
+                                  return ListTile(
+                                    isThreeLine: true,
+                                    leading: const CircleAvatar(
+                                      backgroundColor: Colors.indigo,
+                                      child: Icon(Icons.circle),
+                                    ),
+                                    subtitle: InkWell(
+                                      child: Text(
+                                        '$linkedTaskId: $taskTitle',
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                    ),
+                                    trailing: Wrap(
+                                      spacing: 12,
+                                      children: <Widget>[
+                                        CircleAvatar(
+                                          backgroundColor: Colors.brown,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.edit),
+                                            onPressed: () {
+                                              provider.personalDataStore
+                                                  .clearLinkedTaskIds(); // ???? move this to tasks edit page
+                                              provider.personalDataStore
+                                                  .getCurrentlyLinkedTasks(
+                                                      linkedTaskId); // ???? move this to tasks edit page
+                                              context.push(
+                                                  '/taskdetail?task_id=$linkedTaskId');
+                                            },
+                                          ),
+                                        ),
+                                        CircleAvatar(
+                                          backgroundColor: Colors.brown,
+                                          child: IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            onPressed: () {
+                                              isDeleteLink = true;
+
+                                              provider.personalDataStore
+                                                  .removeLinkedTask(
+                                                      ownerId,
+                                                      linkedTaskId,
+                                                      taskId,
+                                                      provider
+                                                          .fetchAllTasksForUser);
+                                              if (isDeleteLink) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(SnackBar(
+                                                        content: Text(
+                                                            'Link to taskId "$linkedTaskId" with title "$taskTitle" removed')));
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    title: Text(
+                                      linkedTasks[index]!.relation,
+                                      style: const TextStyle(
+                                          color: Colors.grey, fontSize: 10),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -300,14 +370,14 @@ class TaskForm extends StatelessWidget {
                                                         'Task ID "$taskIdControllerInt" already linked to this task. Please remove and retry')));
                                           } else {
                                             addLink = true;
-                                            provider.personalDataStore
-                                                .addLinkedTask(
-                                                    ownerId,
-                                                    taskId,
-                                                    taskIdControllerInt,
-                                                    _labelController.text,
-                                                    provider
-                                                        .fetchAllTasksForUser);
+                                            provider.addLinkedTask(
+                                                _typeController.text.isNotEmpty
+                                                    ? _typeController.text
+                                                    : types[0],
+                                                ownerId,
+                                                taskId,
+                                                taskIdControllerInt,
+                                                _labelController.text);
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -322,14 +392,14 @@ class TaskForm extends StatelessWidget {
                                         if (!linkedTasks.any((element) =>
                                             element!.relation == labels[0])) {
                                           addLink = true;
-                                          provider.personalDataStore
-                                              .addLinkedTask(
-                                                  ownerId,
-                                                  taskId,
-                                                  taskIdControllerInt,
-                                                  labels[0],
-                                                  provider
-                                                      .fetchAllTasksForUser);
+                                          provider.addLinkedTask(
+                                              _typeController.text.isNotEmpty
+                                                  ? _typeController.text
+                                                  : types[0],
+                                              ownerId,
+                                              taskId,
+                                              taskIdControllerInt,
+                                              labels[0]);
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
@@ -369,7 +439,7 @@ class TaskForm extends StatelessWidget {
                     key: const ValueKey("addTaskSubmitForm"),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        provider.personalDataStore.addTask(
+                        provider.addTask(
                             Task(
                                 ownerId: ownerId,
                                 taskTitle: _titleController.text,
@@ -377,9 +447,16 @@ class TaskForm extends StatelessWidget {
                                 status: _statusController.text.isNotEmpty
                                     ? _statusController.text
                                     : statuses[0],
-                                lastUpdate: DateTime.now().toString()),
-                            linkedTasks,
-                            provider.fetchAllTasksForUser);
+                                lastUpdate: DateTime.now().toString(),
+                                group: _typeController.text == 'shared'
+                                    ? _groupController.text.isEmpty
+                                        ? userGroupNames[0]
+                                        : _groupController.text
+                                    : "",
+                                type: _typeController.text.isNotEmpty
+                                    ? _typeController.text
+                                    : types[0]),
+                            linkedTasks);
                         context.pop();
                       }
                     },

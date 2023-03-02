@@ -1,4 +1,6 @@
 import 'package:go_router/go_router.dart';
+import 'package:to_do_app/screens/group_form.dart';
+import 'package:to_do_app/screens/group_list.dart';
 import 'package:to_do_app/screens/task_details.dart';
 import 'package:to_do_app/screens/task_form.dart';
 import 'package:to_do_app/screens/task_list.dart';
@@ -29,5 +31,17 @@ final routes = [
       path: '/qr_scanner',
       builder: (context, state) {
         return const QRScannerWidget();
+      }),
+  GoRoute(
+      path: '/groups',
+      builder: (context, state) {
+        final int ownerId = int.parse(state.queryParams['ownerId'].toString());
+        return GroupList(title: 'Group List', ownerId: ownerId);
+      }),
+  GoRoute(
+      path: '/group',
+      builder: (context, state) {
+        final int ownerId = int.parse(state.queryParams['ownerId'].toString());
+        return GroupForm(title: 'Group Form', ownerId: ownerId);
       })
 ];

@@ -9,10 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share/share.dart';
+import 'package:to_do_app/models/group.dart';
 
 import 'package:to_do_app/models/task.dart';
 import 'package:to_do_app/models/task_image.dart';
 import 'package:to_do_app/models/task_link.dart';
+import 'package:to_do_app/models/user_group.dart';
 import 'package:to_do_app/models_dao/app_database.dart';
 import 'package:to_do_app/utils/task_image_stack.dart';
 
@@ -39,6 +41,7 @@ class TaskDataStoreProvider with ChangeNotifier {
     combined.addAll(await futurePersonalTasks);
     combined.addAll(await futureSharedTasks);
     tasks = combined;
+    tasks!.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     notifyListeners();
   }
 
@@ -57,6 +60,72 @@ class TaskDataStoreProvider with ChangeNotifier {
       return false;
     }
   }
+
+  void addTask(Task task, List<TaskLink?> linkedTasks) {
+    if (task.type == "personal") {
+      personalDataStore.addTask(task, linkedTasks);
+    } else {
+      sharedDataStore.addTask(task, linkedTasks);
+    }
+    fetchAllTasksForUser(task.ownerId);
+    notifyListeners();
+  }
+
+  bool enableGroupsinTasksForm = false;
+
+  enableGroupsDropdown() {
+    enableGroupsinTasksForm = true;
+    notifyListeners();
+  }
+
+  disableGroupsDropdown() {
+    enableGroupsinTasksForm = false;
+    notifyListeners();
+  }
+
+  void getAllGroups() {
+    sharedDataStore.getAllGroups();
+    notifyListeners();
+  }
+
+  void getUserGroups(int ownerId) async {
+    await personalDataStore.getUserGroups(ownerId);
+  }
+
+  void addGroup(Group group) async {
+    await sharedDataStore.addGroup(group);
+    await sharedDataStore.getAllGroups();
+    notifyListeners();
+  }
+
+  void addGroupToUserGroups(UserGroup userGroup) async {
+    await personalDataStore.addGroupToUserGroups(userGroup);
+    await personalDataStore.getUserGroups(userGroup.userId);
+    await sharedDataStore.getAllGroups();
+    notifyListeners();
+  }
+
+  void removeGroupFromUserGroups(int id, int userId) async {
+    await personalDataStore.removeGroupFromUserGroups(id, userId);
+    await personalDataStore.getUserGroups(userId);
+    await sharedDataStore.getAllGroups();
+    notifyListeners();
+  }
+
+  void addLinkedTask(String type, int ownerId, int primaryTaskId,
+      int linkedTaskId, String relation) {
+    if (type == 'personal') {
+      personalDataStore.addLinkedTask(
+          ownerId, primaryTaskId, linkedTaskId, relation);
+    } else if (type == 'shared') {
+      sharedDataStore.addLinkedTask(
+          ownerId, primaryTaskId, linkedTaskId, relation);
+    } else {
+      Exception('Unconfigured task type');
+    }
+    fetchAllTasksForUser(ownerId);
+    notifyListeners();
+  }
 }
 
 //abstract no resp
@@ -67,6 +136,10 @@ abstract class TaskDataStore {
 
   get cards => cards;
 
+  List<String> get userGroupNames => userGroupNames;
+
+  List<Group> get groups => groups;
+
 //use case – get all of inventory items belonging to a particular user
   Future<List<Task>> getTasksForUser(int ownerId);
 
@@ -74,16 +147,15 @@ abstract class TaskDataStore {
 
   getTaskDetails(int taskId);
 
-  void addTask(
-      Task task, List<TaskLink?> linkedTasks, Function fetchAllTasksForUser);
+  void addTask(Task task, List<TaskLink?> linkedTasks);
 
   void deleteTask(int ownerId, int taskId, Function fetchAllTasksForUser);
 
   void removeLinkedTask(int ownerId, int linkedTaskId, int primaryTaskId,
       Function fetchAllTasksForUser);
 
-  void addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
-      String relation, Function fetchAllTasksForUser);
+  Future<void> addLinkedTask(
+      int ownerId, int primaryTaskId, int linkedTaskId, String relation);
 
   void getTaskImageStack(
       int selectedTaskId, int ownerId, Function fetchAllTasksForUser);
@@ -108,12 +180,24 @@ abstract class TaskDataStore {
   void clearLinkedTaskIds();
 
   void getCurrentlyLinkedTasks(int taskId);
+
+  List<DropdownMenuItem<String>>? getUserGroupDropdownMenuItems(int ownerId);
+
+  Future<void> getUserGroups(int ownerId);
+
+  Future<void> getAllGroups();
+
+  Future<void> addGroupToUserGroups(UserGroup userGroup);
+
+  Future<void> removeGroupFromUserGroups(int id, int userId);
+
+  Future<void> addGroup(Group groupObject);
 }
 
 //single resp : translate use cases t firestore interactions
 //// does not provide data, rednerring, or representation hierarchy..
 ///it only cares about this specific use case – how it gets implemente wrt firestore
-class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
+class FirestoreTaskDataStore extends TaskDataStore {
 //to mock a database here //we have flexibility
   final FirebaseFirestore _firestore;
   FirestoreTaskDataStore({FirebaseFirestore? firestore})
@@ -132,6 +216,11 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
 //firebasefirestore.instance is a singleton object and for sqlite it’s a local object
   }
 
+  List<Group> _groups = [];
+
+  @override
+  List<Group> get groups => _groups.toList();
+
   @override
   List<DropdownMenuItem<int>>? getTaskIdDropdownMenuItems(int taskId) {
     return null;
@@ -144,8 +233,29 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  void addTask(Task task, List<TaskLink?> linkedTasks, fetchAllTasksForUser) {
-    // TODO: implement addTask
+  addTask(Task task, List<TaskLink?> linkedTasks) async {
+    int taskId = task.id ?? UniqueKey().hashCode;
+    Task taskObject = Task(
+        id: taskId,
+        ownerId: task.ownerId,
+        taskTitle: task.taskTitle,
+        description: task.description,
+        status: task.status,
+        lastUpdate: task.lastUpdate,
+        type: task.type,
+        group: task.group);
+
+    Map<String, dynamic> dataToSave = taskObject.toJson(taskObject);
+
+    await FirebaseFirestore.instance.collection("task").add(dataToSave);
+
+    if (linkedTasks.isNotEmpty) {
+      for (var element in linkedTasks) {
+        await addLinkedTask(
+            task.ownerId, taskId, element!.linkedTaskId, element.relation);
+      }
+    }
+    clearLinkedTasks();
   }
 
   @override
@@ -161,8 +271,8 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  void addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
-      String relation, Function fetchAllTasksForUser) {
+  Future<void> addLinkedTask(
+      int ownerId, int primaryTaskId, int linkedTaskId, String relation) async {
     // TODO: implement addLinkedTask
   }
 
@@ -237,10 +347,52 @@ class FirestoreTaskDataStore extends TaskDataStore with ChangeNotifier {
     // TODO: implement deleteTask
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> getAllGroups() async {
+    var groupDocs = await FirebaseFirestore.instance.collection('group').get();
+    _groups = groupDocs.docs.map((doc) => Group.fromJson(doc)).toList();
+  }
+
+  @override
+  Future<void> getUserGroups(int ownerId) async {
+    // TODO: implement getUserGroups
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addGroupToUserGroups(UserGroup userGroup) async {
+    // TODO: implement addGroupToUserGroups
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> removeGroupFromUserGroups(int id, int userId) async {
+    // TODO: implement removeGroupFromUserGroups
+    throw UnimplementedError();
+  }
+
+  @override
+  List<DropdownMenuItem<String>>? getUserGroupDropdownMenuItems(int ownerId) {
+    // TODO: implement getUserGroupDropdownMenuItems
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addGroup(Group groupObject) async {
+    Group group = Group(
+        id: groupObject.id,
+        groupName: groupObject.groupName,
+        creatorId: groupObject.creatorId);
+
+    Map<String, dynamic> dataToSave = group.toJson(group);
+
+    await FirebaseFirestore.instance.collection("group").add(dataToSave);
+  }
 }
 
 //single responsibility: Translate use cases to SQflite as a local datastore
-class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
+class FloorSqfliteTaskDataStore extends TaskDataStore {
   final AppDatabase _database;
 
   FloorSqfliteTaskDataStore(AppDatabase database)
@@ -259,8 +411,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
   }
 
   @override
-  addTask(Task task, List<TaskLink?> linkedTasks,
-      Function fetchAllTasksForUser) async {
+  addTask(Task task, List<TaskLink?> linkedTasks) async {
     await _database.taskDao.insertTask(task);
     if (linkedTasks.isNotEmpty) {
       int? latestTaskId =
@@ -273,9 +424,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
             lastUpdate: DateTime.now().toString()));
       }
     }
-    fetchAllTasksForUser(task.ownerId);
     clearLinkedTasks();
-    notifyListeners();
   }
 
   @override
@@ -286,7 +435,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
     await _database.taskDao.deleteTask(taskId);
     fetchAllTasksForUser(ownerId);
     getCurrentlyLinkedTasks(taskId);
-    notifyListeners();
+    // notifyListeners();
   }
 
   //Dropdown Menu Task Ids to link tasks
@@ -353,8 +502,8 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
 
   //all about linked tasks in task_form.dart
   @override
-  addLinkedTask(int ownerId, int primaryTaskId, int linkedTaskId,
-      String relation, Function fetchAllTasksForUser) async {
+  Future<void> addLinkedTask(
+      int ownerId, int primaryTaskId, int linkedTaskId, String relation) async {
     bool isNewTask = checkIsNewTask(primaryTaskId);
     if (!isNewTask) {
       //create linked task with new time
@@ -367,16 +516,13 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
       await _database.taskDao
           .updateTaskWithCurrentTime(primaryTaskId, DateTime.now().toString());
       getCurrentlyLinkedTasks(primaryTaskId);
-      fetchAllTasksForUser(ownerId);
     } else {
       linkedTasks.add(TaskLink(
           taskId: 9999,
           relation: relation,
           linkedTaskId: linkedTaskId,
           lastUpdate: DateTime.now().toString()));
-      fetchAllTasksForUser(ownerId);
     }
-    notifyListeners();
   }
 
   @override
@@ -398,19 +544,19 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
       linkedTaskIds.remove(linkedTaskId);
       fetchAllTasksForUser(ownerId);
     }
-    notifyListeners();
+    // notifyListeners();
   }
 
   @override
   clearLinkedTasks() {
     linkedTasks.clear();
-    notifyListeners();
+    // notifyListeners();
   }
 
   @override
   clearLinkedTaskIds() {
     linkedTaskIds.clear();
-    notifyListeners();
+    // notifyListeners();
   }
 
   bool checkIsNewTask(int taskId) {
@@ -429,7 +575,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
     currentlyLinkedTasks =
         await _database.taskLinkDao.getExistingTaskLinksByTaskId(taskId);
     currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
-    notifyListeners();
+    // notifyListeners();
   }
 
   @override
@@ -439,7 +585,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
         selectedTaskId, selectedStatus, DateTime.now().toString());
     fetchAllTasksForUser(ownerId);
     clearLinkedTasks();
-    notifyListeners();
+    // notifyListeners();
   }
 
   /// Task Image Cards on tasks
@@ -462,7 +608,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
             ))
         .toList();
     fetchAllTasksForUser(ownerId);
-    notifyListeners();
+    // notifyListeners();
   }
 
   @override
@@ -501,7 +647,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
 
       getTaskImageStack(
           selectedTaskId, selectedTaskOwnerId, fetchAllTasksForUser);
-      notifyListeners();
+      // notifyListeners();
     }
   }
 
@@ -529,7 +675,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
 
     getTaskImageStack(
         selectedTaskId, selectedTaskOwnerId, fetchAllTasksForUser);
-    notifyListeners();
+    // notifyListeners();
   }
 
   @override
@@ -570,5 +716,62 @@ class FloorSqfliteTaskDataStore extends TaskDataStore with ChangeNotifier {
     await newImage.writeAsBytes(bytes);
 
     Share.shareFiles([newImage.path], text: imageName);
+  }
+
+  List<String> _userGroupNames = [];
+
+  @override
+  List<String> get userGroupNames => _userGroupNames.toList();
+
+  @override
+  Future<void> getUserGroups(int ownerId) async {
+    var userGroups =
+        await _database.userGroupDao.getUserGroupsByUserId(ownerId);
+    _userGroupNames = userGroups.map((e) => e.groupName).toList();
+  }
+
+  List<String?> allUserGroupDropdownMenuItems = [];
+
+  List<DropdownMenuItem<String>> userGroupDropdownMenuItems = [];
+
+  @override
+  List<DropdownMenuItem<String>>? getUserGroupDropdownMenuItems(int ownerId) {
+    userGroupDropdownMenuItems = _userGroupNames
+        .map((groupNameItem) => DropdownMenuItem(
+              enabled: _userGroupNames
+                  .where((element) => _userGroupNames.contains(element))
+                  .toList()
+                  .contains(groupNameItem),
+              value: groupNameItem,
+              child: Text(
+                groupNameItem,
+              ),
+            ))
+        .toList();
+
+    return userGroupDropdownMenuItems;
+  }
+
+  @override
+  getAllGroups() {
+    // TODO: implement getGroupsForUser
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addGroupToUserGroups(UserGroup userGroup) async {
+    await _database.userGroupDao.insertUserGroup(userGroup);
+    //notifyListeners();
+  }
+
+  @override
+  Future<void> removeGroupFromUserGroups(int id, int userId) async {
+    await _database.userGroupDao.deleteUserGroupbyUserId(userId, id);
+    //notifyListeners();
+  }
+
+  @override
+  Future<void> addGroup(Group groupObject) async {
+    // TODO: implement addGroup
   }
 }
