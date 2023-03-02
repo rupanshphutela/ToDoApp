@@ -352,6 +352,22 @@ class TaskDataStoreProvider with ChangeNotifier {
       return [];
     }
   }
+
+  void clearCurrentlyLinkedTasks(String type) {
+    if (type == 'personal') {
+      personalDataStore.clearCurrentlyLinkedTasks();
+    } else if (type == 'shared') {
+      sharedDataStore.clearCurrentlyLinkedTasks();
+    }
+  }
+
+  void clearLinkedTasks(String type) {
+    if (type == 'personal') {
+      personalDataStore.clearLinkedTasks();
+    } else if (type == 'shared') {
+      sharedDataStore.clearLinkedTasks();
+    }
+  }
 }
 
 //abstract no resp
@@ -412,6 +428,8 @@ abstract class TaskDataStore {
   Future<void> addGroup(Group groupObject);
 
   saveImagePathtoDB(TaskImage taskImage, int selectedTaskId);
+
+  void clearCurrentlyLinkedTasks();
 }
 
 //single resp : translate use cases t firestore interactions
@@ -505,14 +523,17 @@ class FirestoreTaskDataStore extends TaskDataStore {
   addTask(Task task, List<TaskLink?> linkedTasks) async {
     int taskId = task.id ?? UniqueKey().hashCode;
     Task taskObject = Task(
-        id: taskId,
-        ownerId: task.ownerId,
-        taskTitle: task.taskTitle,
-        description: task.description,
-        status: task.status,
-        lastUpdate: task.lastUpdate,
-        type: task.type,
-        group: task.group);
+      id: taskId,
+      ownerId: task.ownerId,
+      taskTitle: task.taskTitle,
+      description: task.description,
+      status: task.status,
+      lastUpdate: task.lastUpdate,
+      type: task.type,
+      group: task.group,
+      taskLinks: [],
+      taskImages: [],
+    );
 
     Map<String, dynamic> dataToSave = taskObject.toJson(taskObject);
 
@@ -621,13 +642,18 @@ class FirestoreTaskDataStore extends TaskDataStore {
       final DocumentSnapshot snapshot =
           await FirebaseFirestore.instance.collection('task').doc(docId).get();
 
-      final taskLinksMap = Map<String, dynamic>.from(snapshot.get('taskLinks'));
-      final taskLinksList = taskLinksMap.entries.toList();
-      //???? do the taskLinksList conversion to currentlyLinkedTasks
-    }
+      final taskLinksMap = snapshot.get('taskLinks');
 
-    currentlyLinkedTasks.sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
-    // notifyListeners();
+      if (taskLinksMap != null && taskLinksMap.isNotEmpty) {
+        List<dynamic> taskLinks =
+            taskLinksMap.map((doc) => TaskLink.fromJsonMap(doc)).toList();
+        taskLinks.forEach((element) {
+          currentlyLinkedTasks.add(element);
+        });
+        currentlyLinkedTasks
+            .sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
+      }
+    }
   }
 
   @override
@@ -650,7 +676,7 @@ class FirestoreTaskDataStore extends TaskDataStore {
 
   @override
   void clearLinkedTasks() {
-    // TODO: implement clearLinkedTasks
+    linkedTasks.clear();
   }
 
   @override
@@ -724,6 +750,11 @@ class FirestoreTaskDataStore extends TaskDataStore {
   saveImagePathtoDB(TaskImage taskImage, int selectedTaskId) {
     // TODO: implement saveImagePathtoDB
     throw UnimplementedError();
+  }
+
+  @override
+  void clearCurrentlyLinkedTasks() {
+    currentlyLinkedTasks.clear();
   }
 }
 
@@ -881,13 +912,11 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   @override
   clearLinkedTasks() {
     linkedTasks.clear();
-    // notifyListeners();
   }
 
   @override
   clearLinkedTaskIds() {
     linkedTaskIds.clear();
-    // notifyListeners();
   }
 
   bool checkIsNewTask(int taskId) {
@@ -1065,5 +1094,10 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   @override
   Future<void> addGroup(Group groupObject) async {
     // TODO: implement addGroup
+  }
+
+  @override
+  void clearCurrentlyLinkedTasks() {
+    currentlyLinkedTasks.clear();
   }
 }

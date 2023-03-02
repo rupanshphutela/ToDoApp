@@ -138,6 +138,10 @@ class TaskList extends StatelessWidget {
                             onPressed: () {
                               var taskId = int.parse(
                                   (filteredTasks[index].id).toString());
+                              provider
+                                  .clearLinkedTasks(filteredTasks[index].type);
+                              provider.clearCurrentlyLinkedTasks(
+                                  filteredTasks[index].type);
                               provider.getCurrentlyLinkedTasks(
                                   taskId,
                                   filteredTasks[index]

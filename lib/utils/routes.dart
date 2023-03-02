@@ -16,7 +16,10 @@ final routes = [
       path: '/task',
       builder: (context, state) {
         final String type = state.queryParams['type'].toString();
-        return TaskForm(title: 'Task Form', type: type);
+
+        return TaskForm(
+            title: '${type == 'shared' ? 'Shared' : 'Personal'} Task Form',
+            type: type);
       }
 
       // builder: (context, state) {

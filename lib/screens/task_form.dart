@@ -231,11 +231,15 @@ class TaskForm extends StatelessWidget {
                                             onPressed: () {
                                               provider.clearLinkedTaskIds(
                                                   type); // ???? move this to tasks edit page
+                                              provider.clearLinkedTasks(type);
+                                              provider
+                                                  .clearCurrentlyLinkedTasks(
+                                                      type);
                                               provider.getCurrentlyLinkedTasks(
                                                   linkedTaskId,
                                                   type); // ???? move this to tasks edit page
                                               context.push(
-                                                  '/taskdetail?taskId=$linkedTaskId');
+                                                  '/taskdetail?taskId=$linkedTaskId&type=$type');
                                             },
                                           ),
                                         ),

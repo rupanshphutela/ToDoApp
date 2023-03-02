@@ -259,6 +259,9 @@ class TaskDetails extends StatelessWidget {
                                       icon: const Icon(Icons.edit),
                                       onPressed: () {
                                         provider.clearLinkedTaskIds(type);
+                                        provider.clearLinkedTasks(type);
+                                        provider
+                                            .clearCurrentlyLinkedTasks(type);
                                         provider.getCurrentlyLinkedTasks(
                                             linkedTaskId,
                                             type); // ???? move this to tasks edit page

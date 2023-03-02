@@ -12,6 +12,8 @@ class Task {
   String lastUpdate;
   String type;
   String? group;
+  List<dynamic>? taskLinks;
+  List<dynamic>? taskImages;
 
   Task({
     this.id,
@@ -22,6 +24,8 @@ class Task {
     required this.lastUpdate,
     required this.type,
     this.group,
+    this.taskLinks,
+    this.taskImages,
   });
 
   toJson(Task task) {
@@ -34,6 +38,8 @@ class Task {
       "lastUpdate": task.lastUpdate,
       "type": task.type,
       "group": task.group,
+      "taskLinks": task.taskLinks,
+      "taskImages": task.taskImages,
     };
   }
 
@@ -47,6 +53,8 @@ class Task {
       lastUpdate: data['lastUpdate'],
       type: data['type'],
       group: data['group'],
+      taskLinks: data['taskLinks'],
+      taskImages: data['taskImages'],
     );
   }
 }

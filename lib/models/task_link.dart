@@ -32,7 +32,7 @@ class TaskLink {
     };
   }
 
-  static TaskLink fromJson(QueryDocumentSnapshot data) {
+  static TaskLink fromJsonMap(Map data) {
     return TaskLink(
       id: data['id'],
       taskId: data['taskId'],
