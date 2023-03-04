@@ -228,18 +228,26 @@ class TaskForm extends StatelessWidget {
                                           backgroundColor: Colors.brown,
                                           child: IconButton(
                                             icon: const Icon(Icons.edit),
-                                            onPressed: () {
-                                              provider.clearLinkedTaskIds(
-                                                  type); // ???? move this to tasks edit page
+                                            onPressed: () async {
+                                              provider.clearLinkedTaskIds(type);
                                               provider.clearLinkedTasks(type);
                                               provider
                                                   .clearCurrentlyLinkedTasks(
                                                       type);
-                                              provider.getCurrentlyLinkedTasks(
-                                                  linkedTaskId,
-                                                  type); // ???? move this to tasks edit page
-                                              context.push(
-                                                  '/taskdetail?taskId=$linkedTaskId&type=$type');
+                                              provider
+                                                  .clearCurrentlyLinkedImages(
+                                                      type);
+                                              await provider
+                                                  .getTaskImageStack(
+                                                      linkedTaskId,
+                                                      ownerId,
+                                                      type)
+                                                  .then((value) async => provider
+                                                      .getCurrentlyLinkedTasks(
+                                                          linkedTaskId, type))
+                                                  .then((value) => context.push(
+                                                      '/taskdetail?taskId=$linkedTaskId&type=$type')); // ???? move this to tasks details page
+                                              ;
                                             },
                                           ),
                                         ),

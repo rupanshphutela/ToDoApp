@@ -19,4 +19,24 @@ class TaskImage {
     required this.imagePath,
     required this.uploadDate,
   });
+
+  toJson(TaskImage taskImage) {
+    return {
+      "id": taskImage.id,
+      "taskId": taskImage.taskId,
+      "ownerId": taskImage.ownerId,
+      "imagePath": taskImage.imagePath,
+      "uploadDate": taskImage.uploadDate,
+    };
+  }
+
+  static TaskImage fromJsonMap(Map data) {
+    return TaskImage(
+      id: data['id'],
+      taskId: data['taskId'],
+      ownerId: data['ownerId'],
+      imagePath: data['imagePath'],
+      uploadDate: data['uploadDate'],
+    );
+  }
 }

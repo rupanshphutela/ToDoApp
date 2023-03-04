@@ -135,19 +135,23 @@ class TaskList extends StatelessWidget {
                           child: IconButton(
                             key: ValueKey("editTaskButton$index"),
                             icon: const Icon(Icons.edit),
-                            onPressed: () {
+                            onPressed: () async {
                               var taskId = int.parse(
                                   (filteredTasks[index].id).toString());
                               provider
                                   .clearLinkedTasks(filteredTasks[index].type);
                               provider.clearCurrentlyLinkedTasks(
                                   filteredTasks[index].type);
-                              provider.getCurrentlyLinkedTasks(
-                                  taskId,
-                                  filteredTasks[index]
-                                      .type); // ???? move this to tasks edit page
-                              context.push(
-                                  '/taskdetail?taskId=$taskId&type=${filteredTasks[index].type}');
+                              provider.clearCurrentlyLinkedImages(
+                                  filteredTasks[index].type);
+                              await provider
+                                  .getTaskImageStack(taskId, ownerId,
+                                      filteredTasks[index].type)
+                                  .then((value) async =>
+                                      await provider.getCurrentlyLinkedTasks(
+                                          taskId, filteredTasks[index].type))
+                                  .then((value) => context.push(
+                                      '/taskdetail?taskId=$taskId&type=${filteredTasks[index].type}')); // ???? move this to tasks details page
                             },
                           ),
                         ),
