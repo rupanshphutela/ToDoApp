@@ -15,6 +15,8 @@ import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 import 'package:to_do_app/utils/routes.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'firebase_options.dart';
 
 void main() async {
@@ -30,6 +32,20 @@ void main() async {
 
   FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true, cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED);
+
+  try {
+    final userCredential = await FirebaseAuth.instance.signInAnonymously();
+    debugPrint(
+        "Signed into the app with a Firebase anonymous auth temporary account\n$userCredential");
+  } on FirebaseAuthException catch (e) {
+    switch (e.code) {
+      case "operation-not-allowed":
+        debugPrint("Anonymous auth hasn't been enabled for this project.");
+        break;
+      default:
+        debugPrint("Unknown error.");
+    }
+  }
 
   //Floor sqlite
   await initializeDatabase();
