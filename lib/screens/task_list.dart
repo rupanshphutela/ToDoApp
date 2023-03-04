@@ -109,15 +109,19 @@ class TaskList extends StatelessWidget {
                   itemBuilder: (context, index) {
                     return Dismissible(
                       key: UniqueKey(),
-                      onDismissed: (direction) {
+                      onDismissed: (direction) async {
                         taskTitle = filteredTasks[index].taskTitle;
                         var taskId = filteredTasks[index].id;
-                        filteredTasks
-                            .removeWhere((element) => element.id == taskId);
-                        provider.deleteTask(
-                            ownerId, taskId!, filteredTasks[index].type);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('Task "$taskTitle" removed')));
+                        var type = filteredTasks[index].type;
+                        await provider
+                            .deleteTask(
+                                ownerId, taskId!, filteredTasks[index].type)
+                            .then((value) => filteredTasks
+                                .removeWhere((element) => element.id == taskId))
+                            .then((value) => ScaffoldMessenger.of(context)
+                                .showSnackBar(SnackBar(
+                                    content:
+                                        Text('Task "$taskTitle" removed'))));
                       },
                       child: ListTile(
                         leading: const CircleAvatar(

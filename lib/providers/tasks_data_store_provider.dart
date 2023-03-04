@@ -334,7 +334,7 @@ class TaskDataStoreProvider with ChangeNotifier {
     return personalDataStore.userGroupNames;
   }
 
-  void deleteTask(int ownerId, int taskId, String type) async {
+  Future<void> deleteTask(int ownerId, int taskId, String type) async {
     if (type == 'personal') {
       await personalDataStore.deleteTask(ownerId, taskId);
     } else if (type == 'shared') {
@@ -902,7 +902,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
     await _database.taskImageDao.deleteLinkedImagesForDeletedTask(taskId);
     await _database.taskLinkDao.deleteLinkedTasksForDeletedTask(taskId);
     await _database.taskDao.deleteTask(taskId);
-    getCurrentlyLinkedTasks(taskId);
+    await getCurrentlyLinkedTasks(taskId);
   }
 
   //Dropdown Menu Task Ids to link tasks
