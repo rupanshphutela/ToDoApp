@@ -112,7 +112,6 @@ class TaskList extends StatelessWidget {
                       onDismissed: (direction) async {
                         taskTitle = filteredTasks[index].taskTitle;
                         var taskId = filteredTasks[index].id;
-                        var type = filteredTasks[index].type;
                         await provider
                             .deleteTask(
                                 ownerId, taskId!, filteredTasks[index].type)

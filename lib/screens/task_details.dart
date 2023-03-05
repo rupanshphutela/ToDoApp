@@ -156,7 +156,7 @@ class TaskDetails extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 15),
                       child: Text(
-                        'Task ID: ${selectedTask.id}, \nTask Type: $type\nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
+                        'Task ID: ${selectedTask.id}, \nTask Type: $type, ${type == 'shared' ? "Group: " + selectedTask.group : ""}\nLast updated: ${selectedTask.lastUpdate.toString().substring(0, 19)}',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ),

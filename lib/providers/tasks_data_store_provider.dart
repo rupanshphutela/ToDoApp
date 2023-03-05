@@ -60,11 +60,11 @@ class TaskDataStoreProvider with ChangeNotifier {
     }
   }
 
-  void addTask(Task task, List<TaskLink?> linkedTasks) {
+  Future<void> addTask(Task task, List<TaskLink?> linkedTasks) async {
     if (task.type == "personal") {
-      personalDataStore.addTask(task, linkedTasks);
+      await personalDataStore.addTask(task, linkedTasks);
     } else {
-      sharedDataStore.addTask(task, linkedTasks);
+      await sharedDataStore.addTask(task, linkedTasks);
     }
     fetchAllTasksForUser(task.ownerId);
     notifyListeners();
@@ -402,7 +402,7 @@ abstract class TaskDataStore {
 
   getTaskDetails(int taskId);
 
-  void addTask(Task task, List<TaskLink?> linkedTasks);
+  Future<void> addTask(Task task, List<TaskLink?> linkedTasks);
 
   Future<void> deleteTask(int ownerId, int taskId);
 
@@ -530,8 +530,18 @@ class FirestoreTaskDataStore extends TaskDataStore {
   }
 
   @override
-  addTask(Task task, List<TaskLink?> linkedTasks) async {
+  Future<void> addTask(Task task, List<TaskLink?> linkedTasks) async {
     int taskId = task.id ?? UniqueKey().hashCode;
+    List<Map> linkedTaskList = [];
+    for (var element in linkedTasks) {
+      linkedTaskList.add({
+        'id': UniqueKey().hashCode,
+        'relation': element!.relation,
+        'taskId': taskId,
+        'linkedTaskId': element.linkedTaskId,
+        'lastUpdate': DateTime.now().toString(),
+      });
+    }
     Task taskObject = Task(
       id: taskId,
       ownerId: task.ownerId,
@@ -541,20 +551,14 @@ class FirestoreTaskDataStore extends TaskDataStore {
       lastUpdate: task.lastUpdate,
       type: task.type,
       group: task.group,
-      taskLinks: [],
+      taskLinks: linkedTaskList,
       taskImages: [],
     );
 
     Map<String, dynamic> dataToSave = taskObject.toJson(taskObject);
 
     await FirebaseFirestore.instance.collection("task").add(dataToSave);
-
-    if (linkedTasks.isNotEmpty) {
-      for (var element in linkedTasks) {
-        await addLinkedTask(
-            task.ownerId, taskId, element!.linkedTaskId, element.relation);
-      }
-    }
+    linkedTaskList.clear();
     clearLinkedTasks();
   }
 
@@ -684,9 +688,9 @@ class FirestoreTaskDataStore extends TaskDataStore {
       if (taskLinksMap != null && taskLinksMap.isNotEmpty) {
         List<dynamic> taskLinks =
             taskLinksMap.map((doc) => TaskLink.fromJsonMap(doc)).toList();
-        taskLinks.forEach((element) {
+        for (var element in taskLinks) {
           currentlyLinkedTasks.add(element);
-        });
+        }
         currentlyLinkedTasks
             .sort((a, b) => b!.lastUpdate.compareTo(a!.lastUpdate));
       }
@@ -880,7 +884,7 @@ class FloorSqfliteTaskDataStore extends TaskDataStore {
   }
 
   @override
-  addTask(Task task, List<TaskLink?> linkedTasks) async {
+  Future<void> addTask(Task task, List<TaskLink?> linkedTasks) async {
     await _database.taskDao.insertTask(task);
     if (linkedTasks.isNotEmpty) {
       int? latestTaskId =

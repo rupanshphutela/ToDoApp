@@ -166,12 +166,12 @@ class TaskForm extends StatelessWidget {
                                       _groupController.text =
                                           groupValue.toString();
                                     },
-                                    // validator: (value) {
-                                    //   if (value == null) {
-                                    //     return 'No value selected';
-                                    //   }
-                                    //   return null;
-                                    // },
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Group mandatory for shared tasks';
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ),
                             ],
@@ -344,7 +344,7 @@ class TaskForm extends StatelessWidget {
                                   backgroundColor: Colors.brown,
                                   child: IconButton(
                                     icon: const Icon(Icons.add),
-                                    onPressed: () {
+                                    onPressed: () async {
                                       int taskIdControllerInt = 0;
                                       try {
                                         taskIdControllerInt =
@@ -367,12 +367,18 @@ class TaskForm extends StatelessWidget {
                                                         'Task ID "$taskIdControllerInt" already linked to this task. Please remove and retry')));
                                           } else {
                                             addLink = true;
-                                            provider.addLinkedTask(
-                                                ownerId,
-                                                taskId,
-                                                taskIdControllerInt,
-                                                _labelController.text,
-                                                type);
+                                            await provider
+                                                .addLinkedTask(
+                                                    ownerId,
+                                                    taskId,
+                                                    taskIdControllerInt,
+                                                    _labelController.text,
+                                                    type)
+                                                .then((value) => ScaffoldMessenger
+                                                        .of(context)
+                                                    .showSnackBar(SnackBar(
+                                                        content: Text(
+                                                            'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.getTaskDetails(taskIdControllerInt, type)!.taskTitle}" added'))));
                                           }
                                         } else {
                                           ScaffoldMessenger.of(context)
@@ -387,24 +393,24 @@ class TaskForm extends StatelessWidget {
                                         if (!linkedTasks.any((element) =>
                                             element!.relation == labels[0])) {
                                           addLink = true;
-                                          provider.addLinkedTask(
-                                              ownerId,
-                                              taskId,
-                                              taskIdControllerInt,
-                                              labels[0],
-                                              type);
+                                          await provider
+                                              .addLinkedTask(
+                                                  ownerId,
+                                                  taskId,
+                                                  taskIdControllerInt,
+                                                  labels[0],
+                                                  type)
+                                              .then((value) => ScaffoldMessenger
+                                                      .of(context)
+                                                  .showSnackBar(SnackBar(
+                                                      content: Text(
+                                                          'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.getTaskDetails(taskIdControllerInt, type)!.taskTitle}" added'))));
                                         } else {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(SnackBar(
                                                   content: Text(
                                                       'Relation "${labels[0]}" already present for another task. Please remove and retry')));
                                         }
-                                      }
-                                      if (addLink) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(SnackBar(
-                                                content: Text(
-                                                    'Relation "${_labelController.text.isNotEmpty ? _labelController.text : labels[0]}" for taskId "$taskIdControllerInt" with title "${provider.getTaskDetails(taskIdControllerInt, type)!.taskTitle}" added')));
                                       }
                                     },
                                   ),
@@ -430,9 +436,9 @@ class TaskForm extends StatelessWidget {
                 children: [
                   ElevatedButton(
                     key: const ValueKey("addTaskSubmitForm"),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        provider.addTask(
+                        await provider.addTask(
                             Task(
                                 ownerId: ownerId,
                                 taskTitle: _titleController.text,
