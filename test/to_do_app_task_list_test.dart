@@ -10,18 +10,25 @@ import 'package:to_do_app/models_dao/app_database.dart';
 import 'package:to_do_app/models_dao/task_dao.dart';
 import 'package:to_do_app/models_dao/task_image_dao.dart';
 import 'package:to_do_app/models_dao/task_link_dao.dart';
-import 'package:to_do_app/providers/tasks_view_model.dart';
 import 'package:to_do_app/utils/routes.dart';
+import 'package:to_do_app/providers/tasks_data_store_provider.dart';
 
 const title = 'The To-Do App';
 
 extension WithScaffold on WidgetTester {
   pumpWithScaffold(provider) async =>
-      await pumpWidget(ChangeNotifierProvider<Tasks>(
-          create: (context) => provider,
-          child: MaterialApp.router(
-              routerConfig:
-                  GoRouter(initialLocation: '/tasks', routes: routes))));
+      await pumpWidget(ChangeNotifierProvider<TaskDataStoreProvider>(
+        create: (context) => provider,
+        child: MaterialApp.router(
+          // routeInformationProvider: myGoRouter.routeInformationProvider,
+          // routeInformationParser: myGoRouter.routeInformationParser,
+          // routerDelegate: myGoRouter.routerDelegate,
+          theme: ThemeData(
+            primarySwatch: Colors.teal,
+          ),
+          routerConfig: GoRouter(initialLocation: '/tasks', routes: routes),
+        ),
+      ));
 }
 
 class MockDatabase extends Mock implements AppDatabase {
@@ -51,7 +58,8 @@ class MockTaskDao extends Mock implements TaskDao {
           taskTitle: 'Title1',
           description: 'Description1',
           status: 'open',
-          lastUpdate: DateTime.now().toString()));
+          lastUpdate: DateTime.now().toString(),
+          type: 'personal'));
       tasks.sort((a, b) => b.lastUpdate.compareTo(a.lastUpdate));
     }
     return tasks;
@@ -145,7 +153,10 @@ void main() async {
   group('The widget that lists all the tasks:', () {
     testWidgets('starts out with no tasks listed', (tester) async {
       //pump change notifier provider and Material app router
-      final provider = Tasks(database);
+
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
@@ -165,7 +176,9 @@ void main() async {
     testWidgets(
         'has a button that when clicked tells the navigator/router to go to the widget for creating a new task',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -189,7 +202,9 @@ void main() async {
     testWidgets(
         'shows a separate widget for each task when there are tasks to list',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
@@ -204,6 +219,7 @@ void main() async {
               status: index == 0 ? "open" : "in progress",
               lastUpdate: DateTime.now().toString(),
               ownerId: 0,
+              type: 'personal',
             ),
             []);
       }
@@ -216,7 +232,9 @@ void main() async {
     });
     testWidgets('shows only some of the tasks when a filter is applied.',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -234,7 +252,8 @@ void main() async {
                 description: "Dummy Description $index",
                 status: index == 0 ? "open" : "in progress",
                 lastUpdate: DateTime.now().toString(),
-                ownerId: 0),
+                ownerId: 0,
+                type: 'personal'),
             []);
       }
       //wait for tasks to create
@@ -272,7 +291,9 @@ void main() async {
 
   group('Each task listed in the widget that lists all the tasks:', () {
     testWidgets('Indicates the name of the task', (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -287,7 +308,8 @@ void main() async {
                 description: "Dummy Description $index",
                 status: index == 0 ? "open" : "in progress",
                 lastUpdate: DateTime.now().toString(),
-                ownerId: 0),
+                ownerId: 0,
+                type: 'personal'),
             []);
       }
 
@@ -303,7 +325,9 @@ void main() async {
     testWidgets(
         'has a button that when clicked tells the navigator/router to go to the widget for editing an existing task',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       await tester.pumpWithScaffold(provider);
       await tester.pumpAndSettle();
@@ -317,7 +341,8 @@ void main() async {
                 description: "Dummy Description $index",
                 status: index == 0 ? "open" : "in progress",
                 lastUpdate: DateTime.now().toString(),
-                ownerId: 0),
+                ownerId: 0,
+                type: 'personal'),
             []);
       }
 
@@ -352,7 +377,9 @@ void main() async {
     testWidgets(
         'Produces a task whose title and description match the ones entered by the user, where "produces" means passes the task to a provided view model or to a parent widget via callback or navigation',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -403,7 +430,9 @@ void main() async {
   group('The widget for editing an existing task', () {
     testWidgets('Fills out the title and description of the existing task',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -466,7 +495,9 @@ void main() async {
 
     testWidgets('Updates the existing task instead of creating a new task',
         (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -480,7 +511,8 @@ void main() async {
                 description: "Dummy Description $index",
                 status: index == 0 ? "open" : "in progress",
                 lastUpdate: DateTime.now().toString(),
-                ownerId: 0),
+                ownerId: 0,
+                type: 'personal'),
             []);
       }
 
@@ -538,7 +570,9 @@ void main() async {
 /*
   group('Bonus Points - Links', () {
     testWidgets('Users can add links', (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -589,7 +623,9 @@ void main() async {
     });
 
     testWidgets('Users can remove links', (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
@@ -651,7 +687,9 @@ void main() async {
     });
 
     testWidgets('Users can use links between tasks', (tester) async {
-      final provider = Tasks(database);
+      final provider = TaskDataStoreProvider(
+          firestoreDataStore: FloorSqfliteTaskDataStore(database),
+          floorDataStore: FloorSqfliteTaskDataStore(database));
 
       //pump change notifier provider and Material app router
       await tester.pumpWithScaffold(provider);
