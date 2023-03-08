@@ -168,6 +168,10 @@ class TaskForm extends StatelessWidget {
                                     },
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Group is mandatory for shared tasks, To create -> Task List -> Select Shared groups on bottomNavBar -> Create group -> Enable group with toggle')));
                                         return 'Group mandatory for shared tasks';
                                       }
                                       return null;
