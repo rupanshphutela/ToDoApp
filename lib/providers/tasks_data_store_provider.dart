@@ -688,6 +688,7 @@ class FirestoreTaskDataStore extends TaskDataStore {
       if (taskLinksMap != null && taskLinksMap.isNotEmpty) {
         List<dynamic> taskLinks =
             taskLinksMap.map((doc) => TaskLink.fromJsonMap(doc)).toList();
+        currentlyLinkedTasks.clear();
         for (var element in taskLinks) {
           currentlyLinkedTasks.add(element);
         }
